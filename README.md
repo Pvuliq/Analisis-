@@ -5,7 +5,7 @@ Este es el repositorio del grupo 2, cuyos integrantes son:
 - Paula Castillo- ROL: 2024
 - Felipe Aguilera - ROL: 2024
 - Javiera Roda - ROL: 202473009-6
-- Benjamin Vergara - ROL: 2024
+- Benjamin Vergara - ROL: 202473083-5
     - **Tutor**: Tutor
 
 # [NUEVO] INF236-2025-2-Proyecto Base

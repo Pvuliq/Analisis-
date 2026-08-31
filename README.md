@@ -1,6 +1,6 @@
 # Grupo 2
 
-Este es el repositorio del grupo x, cuyos integrantes son:
+Este es el repositorio del grupo 2, cuyos integrantes son:
 
 - Integrante 1 - ROL:
 - Integrante 2 - ROL:

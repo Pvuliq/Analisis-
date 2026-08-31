@@ -3,7 +3,7 @@
 Este es el repositorio del grupo 2, cuyos integrantes son:
 
 - Paula Castillo - ROL: 202473070-3
-- Felipe Aguilera - ROL: 2024
+- Felipe Aguilera - ROL: 202473021-5
 - Javiera Roda - ROL: 202473009-6
 - Benjamin Vergara - ROL: 202473083-5
     - **Tutor**: Tutor

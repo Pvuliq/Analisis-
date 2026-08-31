@@ -1,0 +1,72 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Página-1" id="SIe2CZkswhkEkgGDi3x8">
+    <mxGraphModel dx="827" dy="1035" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-25" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" target="sNjeIAFZl5lVNlbxTnE6-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-1" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;" value="&lt;font style=&quot;font-size: 24px;&quot;&gt;SISTEMA DE MEMORIAS&lt;/font&gt;" vertex="1">
+          <mxGeometry height="190" width="320" x="266" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-12" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;" target="sNjeIAFZl5lVNlbxTnE6-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-2" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Jefe de Carrera" vertex="1">
+          <mxGeometry height="60" width="30" x="86" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-13" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=0;startArrow=classic;startFill=1;" target="sNjeIAFZl5lVNlbxTnE6-1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-3" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Secretaria" vertex="1">
+          <mxGeometry height="60" width="30" x="196" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-11" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=1;entryDx=0;entryDy=0;" target="sNjeIAFZl5lVNlbxTnE6-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="312.86" y="460" />
+              <mxPoint x="312.86" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-4" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Correferente" vertex="1">
+          <mxGeometry height="60" width="30" x="296" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-10" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;" target="sNjeIAFZl5lVNlbxTnE6-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-5" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Memorista" vertex="1">
+          <mxGeometry height="60" width="30" x="706" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-9" edge="1" parent="1" source="sNjeIAFZl5lVNlbxTnE6-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="sNjeIAFZl5lVNlbxTnE6-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-6" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Profesor Guia" vertex="1">
+          <mxGeometry height="60" width="30" x="626" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Gestiona registros de alumnos, docentes y estados" vertex="1">
+          <mxGeometry height="30" width="104" x="313" y="142" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Supervisa estados y formaliza inicio/cierre de procesos" vertex="1">
+          <mxGeometry height="30" width="110" x="150" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-20" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Registra propuesta, sube avances e informe final" vertex="1">
+          <mxGeometry height="30" width="100" x="590" y="309" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-21" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Revisa informe final y registra evaluación " vertex="1">
+          <mxGeometry height="30" width="95" x="313" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-22" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Revisa rúbrica, valida avances y aprueba propuesta de memoria" vertex="1">
+          <mxGeometry height="30" width="95" x="443" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-24" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;INTELIGENCIA ARTIFICIAL&lt;/font&gt;" vertex="1">
+          <mxGeometry height="95" width="160" x="566" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="sNjeIAFZl5lVNlbxTnE6-27" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Evalúa/Acepta propuesta del prememorista&amp;nbsp;" vertex="1">
+          <mxGeometry height="30" width="95" x="551" y="401" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

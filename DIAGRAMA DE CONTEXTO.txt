@@ -1,0 +1,20 @@
+DIAGRAMA DE CONTEXTO 
+
+SISTEMAS MEMORIAS 
+- Pre-memorista/Memorista: Estudiante que cursa TT1 / TT2. Interactúa con el sistema registrando la ficha de propuesta de tema (con objetivos y formulación del problema), firmando el compromiso ético, subiendo avances y entregando el informe final de memoria.
+
+- Jefe de carrera: Docente o profesional que supervisa el proyecto. Interactúa revisando la propuesta de tema según la rúbrica, firmando la aprobación formal y evaluando los avances e informe final del memorista.
+
+- Profesor guía (Co-guía o mentor): Autoridad académica que supervisa el inicio y cierre formal de los procesos de TT1 y TT2 en sus respectivos campus (Casa Central / San Joaquín), y formaliza las aprobaciones finales.
+
+- Correferente: Segundo docente evaluador asignado en la etapa final. Interactúa con el sistema revisando el informe final de memoria y registrando su evaluación de cara a la defensa de título.
+
+- Secretaria: Personal administrativo que gestiona la información y registros de estudiantes, profesores asignados y estados de las memorias dentro del sistema. 
+
+PREGUNTAS:
+
+
+- QUE HACE LA SECRETARIA (manejar info es muy ambiguo)
+- IA interactua con el sistema o con un actor de por medio? 
+- quien tiene acceso a que tipo de información? 
+- quien puede editar información del sistema? 

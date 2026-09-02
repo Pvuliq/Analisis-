@@ -6,7 +6,7 @@ Este es el repositorio del grupo 2, cuyos integrantes son:
 - Felipe Aguilera - ROL: 202473021-5
 - Javiera Roda - ROL: 202473009-6
 - Benjamin Vergara - ROL: 202473083-5
-    - **Tutor**: Tutor
+    - **Tutor**: Martina Tejo
 
 # [NUEVO] INF236-2025-2-Proyecto Base
 

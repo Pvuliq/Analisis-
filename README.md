@@ -1,12 +1,12 @@
-# Grupo x
+# Grupo 2
 
-Este es el repositorio del grupo x, cuyos integrantes son:
+Este es el repositorio del grupo 2, cuyos integrantes son:
 
-- Integrante 1 - ROL:
-- Integrante 2 - ROL:
-- Integrante 3 - ROL:
-- Integrante 4 - ROL:
-    - **Tutor**: Tutor
+- Paula Castillo - ROL: 202473070-3
+- Felipe Aguilera - ROL: 202473021-5
+- Javiera Roda - ROL: 202473009-6
+- Benjamin Vergara - ROL: 202473083-5
+    - **Tutor**: Martina Tejo
 
 # [NUEVO] INF236-2025-2-Proyecto Base
 

@@ -8,6 +8,9 @@ Este es el repositorio del grupo 2, cuyos integrantes son:
 - Benjamin Vergara - ROL: 202473083-5
     - **Tutor**: Martina Tejo
 
+## Wiki
+Documentación del proyecto en la Wiki en el siguiente [enlace](https://gitlab.inf.utfsm.cl/inf236-cc-2026-2/grupo02-2026-proyinf/-/wikis/home).
+
 # [NUEVO] INF236-2025-2-Proyecto Base
 
 ## Aspectos técnicos relevantes

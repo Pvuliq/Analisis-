@@ -1,93 +1,134 @@
-# GRUPO02-2026-PROYINF
+# Grupo 2
 
+Este es el repositorio del grupo 2, cuyos integrantes son:
 
+- Paula Castillo - ROL: 202473070-3
+- Felipe Aguilera - ROL: 202473021-5
+- Javiera Roda - ROL: 202473009-6
+- Benjamin Vergara - ROL: 202473083-5
+    - **Tutor**: Martina Tejo
 
-## Getting started
+## Wiki
+Documentación del proyecto en la Wiki en el siguiente [enlace](https://gitlab.inf.utfsm.cl/inf236-cc-2026-2/grupo02-2026-proyinf/-/wikis/home).
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+# [NUEVO] INF236-2025-2-Proyecto Base
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Aspectos técnicos relevantes
 
-## Add your files
+_Todo aspecto relevante para poder usar el proyecto o consideraciones del proyecto base a ser entregado_
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+_Nada por el momento..._
+
+## Requerimientos
+
+Para utilizar el proyecto base debe tener instalado [Node.js](https://nodejs.org/en), [Docker](https://www.docker.com/) y se recomienda [Postman](https://www.postman.com/) para poder probar los endpoints de las APIs.
+
+## Puntos a Considerar
+
+La solución a desarrollar debe seguir los siguientes lineamientos (imagen referecial al final):
+* Se debe considerar al menos dos API's:
+    * **API_TRAMITACION:** Con todo lo referido a los pasos de solicitud, evaluación y firmas de documentos.
+    * **API_VALIDACIONES:** Con todo lo referido a los procesos de activación, desembolso, cobranza y pagos de cuotas.
+Si lo estiman necesario pueden añadir otras API's al proyecto, siempre y cuando cumplan con las reglas detalladas a continuación.
+* Cada API contará con una base de datos mysql.
+* Las API's deben ser construidas utilizando [Node.js](https://nodejs.org/en), además cuentan con [Express](https://expressjs.com/es/) para facilitar la construcción de estas.
+* Las bases de datos deben estar en el mismo contenedor, pero no deben compartirse servicios.
+* Cada servicio debe estar en un contenedor.
+* El proyecto base solo considera los servicios.
+* La tecnología de Frontend la define el grupo.
+
+![Modelo](img/Clase_UML_-_Clase_UML.png)
+## Levantando el proyecto
+### API_Ejemplo
+
+Iniciaremos levantando la imagen de mysql en docker junto con la API de ejemplo. En una terminal dentro de la **carpeta principal**, escriba el siguiente comando:
+```
+docker compose up --build
+```
+La base de datos se inicializará con una tabla con información de países especificada en el archivo "API_EJEMPLO/init/init.sql".
+
+Deben esperar a que los contenedores se inicien en su totalidad, pueden verificar esto en la interfaz de Docker. Luego, podrán probar los endpoints de la API, estos son:
+```
+GET: localhost:8082/api/pais
+POST: localhost:8082/api/pais
+PUT: localhost:8082/api/pais/:id
+DELETE: localhost:8082/api/pais/:id
+```
+Sirven para leer, crear, modificar y eliminar registros de la base de datos, respectivamente.
+
+> ⚠️ Cuando escriban ``docker compose up --build``, es normal que aparezcan errores al principio en la terminal. Esto pasa porque la API necesita conectarse a la base de datos. Si bien Docker levanta la BD y luego la api, la primera se levanta mucho más lento que la api! Así que la api lanza errores mientras espera que la base de datos esté lista. Es decir, no entren en pánico y esperen que diga: "Server running!". En caso de que en la aplicación de Docker Desktop comprueben que algunas api no estan corriendo, ejecuten el comando nuevamente o manualmente presionen el simbolo de "run" para las api afectadas.
+
+### Configuración del Proyecto
+Para el desarrollo del proyecto pueden quitar la API Ejemplo del archivo "docker-compose.yml" y eliminar su contenedor. **Noten que el proceso descrito a continuación levanta los contenedores uno a uno. Si lo desean, pueden investigar como juntar todo en el mismo docker-compose (como la API_EJEMPLO y la BD)!**
+
+#### Bases de Datos
+Para comenzar, deben tener ejecutándose el contenedor de la base de datos creado con la api de ejemplo, o pueden crearlo desde cero con el comando:
+```
+docker run -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=password -d mysql
+```
+
+![Docker](img/console_docker2.png)
+
+Ahora, crearemos las bases de datos. Para esto debemos entrar en el contenedor, con el siguiente comando:
+```
+ docker exec -it proyecto-base-main-mysql-1 mysql -uroot -p
+```
+Donde "proyecto-base-main-mysql-1" es el nombre del contenedor. Si no les coincide pueden revisarlo con "docker ps". Luego, deben ingresar la clave que en este caso es: **password**.
+
+Una vez dentro del contenedor podemos crear las bases de datos:
+```
+create database Nombre;
+```
+Donde Nombre, deberá ser sustituido por: BDXX_TRAMITACION y BDXX_VALIDACIONES, donde XX corresponde al número de su grupo.
+
+### API's
+#### API_TRAMITACION
+Se debe editar el archivo con nombre ".env" que se encuentra en las carpetas "API_TRAMITACION". Este debería contener lo siguiente:
+```js
+PORT_API = 8080
+DB_USER = "root"
+DB_PASSWORD = "password"
+DB_NAME = "Nombre de la base de datos"
+DB_PORT = 3306
+DB_HOST = "host.docker.internal"
+```
+Deben cambiar DB_NAME por el nombre que le pusieron a la base de datos (BDXX_TRAMITACION).
+
+Una vez creado el archivo, se levantará el contenedor de la API. Primero deben entrar en la carpeta de "API_TRAMITACION" y escribir:
+```
+docker compose up --build -d
+```
+
+#### API_VALIDACIONES
+Los pasos a seguir son los mismos, únicamente deben fijarse que ahora esta API correrá en el puerto "8081".
+```js
+PORT_API = 8081
+DB_USER = "root"
+DB_PASSWORD = "password"
+DB_NAME = "Nombre de la base de datos"
+DB_PORT = 3306
+DB_HOST = "host.docker.internal"
+```
+
+Una vez levantado todo, deberían poder ver en Docker todos sus contenedores corriendo:
+
+![Docker](img/contenedores.png)
+
+Pueden probar los siguientes end-points en Postman para verificarlo:
+```
+GET: localhost:8080/createTable
+```
+
+![Ejemplo1](img/ejemplo1.png)
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.inf.utfsm.cl/inf236-cc-2026-2/grupo02-2026-proyinf.git
-git branch -M main
-git push -uf origin main
+GET: localhost:8081/createTable
 ```
 
-## Integrate with your tools
+![Ejemplo2](img/ejemplo2.png)
 
-- [ ] [Set up project integrations](https://gitlab.inf.utfsm.cl/inf236-cc-2026-2/grupo02-2026-proyinf/-/settings/integrations)
+Además, pueden poner en su navegador ```localhost:8080``` y/o ```localhost:8081```, y les debería salir el siguiente mensaje:
 
-## Collaborate with your team
+![Ejemplo3](img/navegador.png)
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Enjoy!

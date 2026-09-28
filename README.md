@@ -138,16 +138,10 @@ Pasos seguidos para el levantamiento:
 Capturas de pantalla:
 
 * Ejecutar "docker compose up --build -d" en "API_TRAMITACION":
-![Screenshot_2026-09-03_231022](uploads/a686290002d74983d47c987a0e35d6a6/Screenshot_2026-09-03_231022.png)
+![Consola1](img/docker_compose_tramitacion.png)
 
 * Ejecutar "docker compose up --build -d" en "API_VALIDACIONES":
-![Screenshot_2026-09-03_231041](uploads/c40c6d27cfbd5b485d2e11f24e789ae4/Screenshot_2026-09-03_231041.png)
+![Consola2](img/docker_compose_validaciones.png)
 
 * Docker Desktop con todos los contenedores iniciados en su totalidad:
-![Screenshot_2026-09-03_232257](uploads/e5666fc751af75db2d307e9aff860b38/Screenshot_2026-09-03_232257.png)
-
-* Visitando "localhost:8080" en el navegador:
-![Screenshot_2026-09-03_231418](uploads/83771b10a8221ade26a14d87762f97fd/Screenshot_2026-09-03_231418.png)
-
-* Visitando "localhost:8081" en el navegador:
-![Screenshot_2026-09-03_231436](uploads/78114d2ea254f5f5d99892fbff83c067/Screenshot_2026-09-03_231436.png)
+![Docker1](img/docker_desktop_levantado.png)

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memoria | Prototipo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-mark">M</div>
+      <div>
+        <p class="eyebrow">Plataforma de titulacion</p>
+        <h1>Memoria</h1>
+      </div>
+      <nav class="navigation" aria-label="Navegacion principal">
+        <button class="nav-item is-active" type="button">Inicio</button>
+        <button class="nav-item" type="button">Entregas</button>
+        <button class="nav-item" type="button">Revisiones</button>
+      </nav>
+      <p class="sidebar-note">Un espacio para seguir cada avance, revision y hito de defensa.</p>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Prototipo de tercera entrega</p>
+          <h2>Panel de trabajo</h2>
+        </div>
+        <label class="role-picker">
+          <span>Vista actual</span>
+          <select id="roleSelect">
+            <option value="student">Memorista</option>
+            <option value="guide">Profesor guia</option>
+          </select>
+        </label>
+      </header>
+
+      <section class="intro-panel">
+        <div>
+          <p class="section-label">Estado del proceso</p>
+          <h3 id="welcomeTitle">Tu proximo avance empieza aqui.</h3>
+          <p id="welcomeText">Revisa tus entregas y prepara la siguiente version de tu documento.</p>
+        </div>
+        <span class="status-badge">En desarrollo</span>
+      </section>
+
+      <section class="overview-grid" aria-label="Resumen del proceso">
+        <article class="overview-card accent-blue">
+          <span class="card-kicker">Entregas</span>
+          <strong>0</strong>
+          <p>Versiones registradas</p>
+        </article>
+        <article class="overview-card accent-yellow">
+          <span class="card-kicker">Revisiones</span>
+          <strong>0</strong>
+          <p>Observaciones pendientes</p>
+        </article>
+        <article class="overview-card accent-green">
+          <span class="card-kicker">Defensa</span>
+          <strong>En preparacion</strong>
+          <p>Estado actual del proceso</p>
+        </article>
+      </section>
+
+      <section class="next-step">
+        <div>
+          <p class="section-label">Siguiente paso</p>
+          <h3 id="nextStepTitle">Registrar una nueva entrega</h3>
+          <p id="nextStepText">La primera funcionalidad conectara este panel con la carga de avances del memorista.</p>
+        </div>
+        <button class="primary-button" type="button" id="primaryAction">Preparar entrega</button>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

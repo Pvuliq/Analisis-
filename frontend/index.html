@@ -4,76 +4,115 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Memoria | Prototipo</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=integrated-flow-v4-20261015">
 </head>
 <body>
   <main class="app-shell">
-    <aside class="sidebar">
-      <div class="brand-mark">M</div>
-      <div>
-        <p class="eyebrow">Plataforma de titulacion</p>
-        <h1>Memoria</h1>
+    <header class="site-header">
+      <div class="brand-lockup">
+        <div class="brand-mark">M</div>
+        <div>
+          <p class="eyebrow">Plataforma de titulacion</p>
+          <h1>Memoria</h1>
+        </div>
       </div>
       <nav class="navigation" aria-label="Navegacion principal">
-        <button class="nav-item is-active" type="button">Inicio</button>
-        <button class="nav-item" type="button">Entregas</button>
-        <button class="nav-item" type="button">Revisiones</button>
+        <button class="nav-item is-active" type="button" data-section="inicio">Inicio</button>
+        <button class="nav-item" type="button" data-section="avances">Mis avances</button>
+        <button class="nav-item" type="button" data-section="revisiones">Revisiones</button>
+        <button class="nav-item" type="button" data-section="defensa">Defensa</button>
       </nav>
-      <p class="sidebar-note">Un espacio para seguir cada avance, revision y hito de defensa.</p>
-    </aside>
+      <label class="role-picker">
+        <span>Vista actual</span>
+        <select id="roleSelect">
+          <option value="student">Memorista</option>
+          <option value="guide">Profesor guia</option>
+        </select>
+      </label>
+    </header>
 
     <section class="workspace">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Prototipo de tercera entrega</p>
-          <h2>Panel de trabajo</h2>
+          <p class="eyebrow">Espacio de trabajo</p>
+          <h2 id="workspaceTitle">Mi memoria</h2>
         </div>
-        <label class="role-picker">
-          <span>Vista actual</span>
-          <select id="roleSelect">
-            <option value="student">Memorista</option>
-            <option value="guide">Profesor guia</option>
-          </select>
-        </label>
+        <p class="workspace-note" id="workspaceNote">Centraliza tus avances, revisiones y próximos hitos en un solo lugar.</p>
       </header>
 
-      <section class="intro-panel">
-        <div>
-          <p class="section-label">Estado del proceso</p>
-          <h3 id="welcomeTitle">Tu proximo avance empieza aqui.</h3>
-          <p id="welcomeText">Revisa tus entregas y prepara la siguiente version de tu documento.</p>
-        </div>
-        <span class="status-badge">En desarrollo</span>
-      </section>
+      <div class="home-layout">
+        <section class="welcome-panel">
+          <div>
+            <p class="section-label">Resumen del proceso</p>
+            <h3 id="welcomeTitle">Tu próximo avance empieza aquí.</h3>
+            <p id="welcomeDescription">Revisa el estado de tu memoria y continúa con la tarea que tienes pendiente.</p>
+          </div>
+          <span class="status-badge" id="statusBadge">En desarrollo</span>
+        </section>
 
-      <section class="overview-grid" aria-label="Resumen del proceso">
-        <article class="overview-card accent-blue">
-          <span class="card-kicker">Entregas</span>
-          <strong>0</strong>
-          <p>Versiones registradas</p>
-        </article>
-        <article class="overview-card accent-yellow">
-          <span class="card-kicker">Revisiones</span>
-          <strong>0</strong>
-          <p>Observaciones pendientes</p>
-        </article>
-        <article class="overview-card accent-green">
-          <span class="card-kicker">Defensa</span>
-          <strong>En preparacion</strong>
-          <p>Estado actual del proceso</p>
-        </article>
-      </section>
+        <section class="progress-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label" id="progressLabel">Estado actual</p>
+              <h3 id="progressTitle">Documento en desarrollo</h3>
+            </div>
+            <strong id="progressValue">02<span>/04</span></strong>
+          </div>
+          <div class="progress-track"><span id="progressFill"></span></div>
+          <div class="progress-labels"><span id="progressStart">Inicio</span><span id="progressMiddle">Revisión</span><span id="progressEnd">Defensa</span></div>
+        </section>
 
-      <section class="next-step">
-        <div>
-          <p class="section-label">Siguiente paso</p>
-          <h3 id="nextStepTitle">Registrar una nueva entrega</h3>
-          <p id="nextStepText">La primera funcionalidad conectara este panel con la carga de avances del memorista.</p>
-        </div>
-        <button class="primary-button" type="button" id="primaryAction">Preparar entrega</button>
-      </section>
+        <section class="quick-access" aria-label="Accesos principales">
+          <div class="section-heading">
+            <div>
+              <p class="section-label">Accesos rápidos</p>
+              <h3 id="quickTitle">Continúa tu trabajo</h3>
+            </div>
+            <span id="quickCount">3 áreas disponibles</span>
+          </div>
+          <div class="area-list">
+            <button class="area-link" type="button" data-section="avances">
+              <span class="area-number">01</span>
+              <span><strong id="areaOneTitle">Mis avances</strong><small id="areaOneDescription">Entrega y seguimiento de documentos</small></span>
+              <span class="area-arrow">→</span>
+            </button>
+            <button class="area-link" type="button" data-section="revisiones">
+              <span class="area-number">02</span>
+              <span><strong id="areaTwoTitle">Revisiones</strong><small id="areaTwoDescription">Observaciones y correcciones del profesor</small></span>
+              <span class="area-arrow">→</span>
+            </button>
+            <button class="area-link" type="button" data-section="defensa">
+              <span class="area-number">03</span>
+              <span><strong id="areaThreeTitle">Defensa</strong><small id="areaThreeDescription">Estado y próximos pasos del proceso final</small></span>
+              <span class="area-arrow">→</span>
+            </button>
+          </div>
+        </section>
+
+        <aside class="activity-panel">
+          <div class="section-heading">
+            <p class="section-label" id="activityLabel">Actividad reciente</p>
+            <span id="activityMeta">Últimos movimientos</span>
+          </div>
+          <div class="empty-activity">
+            <span class="empty-mark">+</span>
+            <strong id="activityTitle">Aún no hay actividad</strong>
+            <p id="activityDescription">Tus entregas y revisiones aparecerán aquí.</p>
+          </div>
+        </aside>
+
+        <section class="next-milestone">
+          <div>
+            <p class="section-label" id="nextLabel">Próximo hito</p>
+            <h3 id="nextTitle">Registrar una nueva entrega</h3>
+            <p id="nextDescription">Cuando tengas una nueva versión de tu documento, podrás cargarla para iniciar la revisión.</p>
+          </div>
+          <button class="primary-button" id="primaryButton" type="button" data-section="avances">Ir a mis avances</button>
+        </section>
+      </div>
+      <div id="featureView" class="feature-view" hidden></div>
     </section>
   </main>
-  <script src="app.js"></script>
+  <script src="app.js?v=integrated-flow-layout-20261015"></script>
 </body>
 </html>

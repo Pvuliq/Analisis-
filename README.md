@@ -145,3 +145,5 @@ Capturas de pantalla:
 
 * Docker Desktop con todos los contenedores iniciados en su totalidad:
 ![Docker1](img/docker_desktop_levantado.png)
+
+[Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)

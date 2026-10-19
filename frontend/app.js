@@ -378,3 +378,5 @@ function setActiveNavigation(section) {
 }
 
 updateHomeRole('student');
+
+//Avance HU-02 : Registrar observaciones y correcciones sobre el avance

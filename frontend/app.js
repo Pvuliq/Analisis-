@@ -157,8 +157,8 @@ function renderStudentAdvances() {
         <p>Adjunta una nueva versión para registrarla como entrega oficial del proceso.</p>
         <label class="file-picker" for="advanceFile">Seleccionar archivo PDF</label>
         <input id="advanceFile" class="visually-hidden" type="file" accept="application/pdf">
-        <div class="file-well"><span class="file-icon">PDF</span><div><strong id="selectedFile">Avance_memoria_v03.pdf</strong><small>2.4 MB · listo para enviar</small></div><span class="file-state">OK</span></div>
-        <button class="action-button" id="uploadAction" type="button">Registrar entrega</button>
+        <div class="file-well"><span class="file-icon">PDF</span><div><strong id="selectedFile">Ningún archivo seleccionado</strong><small id="selectedFileMeta">Selecciona un PDF para continuar</small></div><span class="file-state" id="fileState">Pendiente</span></div>
+        <button class="action-button" id="uploadAction" type="button" disabled>Registrar entrega</button>
       </section>
       <aside class="evidence-panel">
         <p class="section-label">Al confirmar</p>
@@ -299,11 +299,18 @@ function showHome() {
 function attachFeatureInteractions() {
   const fileInput = document.querySelector('#advanceFile');
   const selectedFile = document.querySelector('#selectedFile');
+  const selectedFileMeta = document.querySelector('#selectedFileMeta');
+  const fileState = document.querySelector('#fileState');
   const uploadAction = document.querySelector('#uploadAction');
   const approvalAction = document.querySelector('#approvalAction');
 
   fileInput?.addEventListener('change', () => {
-    if (fileInput.files[0]) selectedFile.textContent = fileInput.files[0].name;
+    const file = fileInput.files[0];
+    if (!file) return;
+    selectedFile.textContent = file.name;
+    selectedFileMeta.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB · listo para enviar`;
+    fileState.textContent = 'OK';
+    uploadAction.disabled = false;
   });
   uploadAction?.addEventListener('click', () => {
     uploadAction.textContent = 'Avance subido con éxito';

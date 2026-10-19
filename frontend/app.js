@@ -380,3 +380,5 @@ function setActiveNavigation(section) {
 updateHomeRole('student');
 
 //Avance HU-02 : Registrar observaciones y correcciones sobre el avance
+
+//Avance HU-07 : Emitir visto bueno para autorizar la defensa de la memoria

@@ -148,3 +148,6 @@ Capturas de pantalla:
 
 ## Prototipo
 * [Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)
+* Para ejecutar el prototipo, ejecute el siguiente comando dentro de la carpeta del proyecto:
+  ```bash
+  python3 -m http.server 5500

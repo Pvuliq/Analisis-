@@ -1,3 +1,5 @@
+import { postFile } from './api.js';
+
 export function renderStudentAdvances() {
   return `
     <div class="scenario-grid">
@@ -56,8 +58,26 @@ export function bindAdvanceEvents(root = document) {
     if (uploadAction) uploadAction.disabled = false;
   });
 
-  uploadAction?.addEventListener('click', () => {
-    uploadAction.textContent = 'Avance subido con éxito';
-    uploadAction.classList.add('is-complete');
+  uploadAction?.addEventListener('click', async () => {
+    const file = fileInput?.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('archivoPdf', file);
+    formData.append('estudianteId', '202173001');
+
+    uploadAction.disabled = true;
+    uploadAction.textContent = 'Subiendo avance...';
+
+    try {
+      const createdAdvance = await postFile('/api/avances', formData);
+      uploadAction.textContent = 'Avance subido con éxito';
+      uploadAction.classList.add('is-complete');
+      if (fileState) fileState.textContent = 'Enviado';
+      window.dispatchEvent(new CustomEvent('advance:created', { detail: createdAdvance }));
+    } catch (error) {
+      uploadAction.disabled = false;
+      uploadAction.textContent = error.message || 'No se pudo subir el avance';
+    }
   });
 }

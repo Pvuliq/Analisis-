@@ -1,6 +1,7 @@
 import { bindAdvanceEvents, renderGuideAdvances, renderStudentAdvances } from './avances.js';
 import { bindReviewEvents, renderReviews } from './revisiones.js';
 import { bindDefenseEvents, renderDefense, renderGuideReviewAndDefense } from './defensa.js';
+import { get } from './api.js';
 
 const roleSelect = document.querySelector('#roleSelect');
 const navigationItems = document.querySelectorAll('.nav-item');
@@ -12,26 +13,9 @@ const workspaceNote = document.querySelector('#workspaceNote');
 const welcomeTitle = document.querySelector('#welcomeTitle');
 const welcomeDescription = document.querySelector('#welcomeDescription');
 const statusBadge = document.querySelector('#statusBadge');
-const progressLabel = document.querySelector('#progressLabel');
-const progressTitle = document.querySelector('#progressTitle');
-const progressValue = document.querySelector('#progressValue');
-const progressFill = document.querySelector('#progressFill');
-const progressLabels = [
-  document.querySelector('#progressStart'),
-  document.querySelector('#progressMiddle'),
-  document.querySelector('#progressEnd')
-];
 const quickTitle = document.querySelector('#quickTitle');
-const areaTitles = [
-  document.querySelector('#areaOneTitle'),
-  document.querySelector('#areaTwoTitle'),
-  document.querySelector('#areaThreeTitle')
-];
-const areaDescriptions = [
-  document.querySelector('#areaOneDescription'),
-  document.querySelector('#areaTwoDescription'),
-  document.querySelector('#areaThreeDescription')
-];
+const quickCount = document.querySelector('#quickCount');
+const quickContent = document.querySelector('#quickContent');
 const activityLabel = document.querySelector('#activityLabel');
 const activityMeta = document.querySelector('#activityMeta');
 const activityTitle = document.querySelector('#activityTitle');
@@ -50,12 +34,8 @@ const roleProfiles = {
     welcomeTitle: 'Tu próximo avance empieza aquí.',
     welcomeDescription: 'Revisa el estado de tu memoria y continúa con la tarea que tienes pendiente.',
     status: 'En desarrollo',
-    progressLabel: 'Estado actual',
-    progressTitle: 'Documento en desarrollo',
-    progressValue: ['02', '/04'],
-    progressWidth: '50%',
-    progressLabels: ['Inicio', 'Revisión', 'Defensa'],
-    quickTitle: 'Continúa tu trabajo',
+    quickTitle: 'Entregas recientes',
+    quickCount: 'Sin entregas',
     areaDescriptions: [
       ['Mis avances', 'Entrega y seguimiento de documentos'],
       ['Revisiones', 'Observaciones y correcciones del profesor'],
@@ -68,7 +48,7 @@ const roleProfiles = {
     nextLabel: 'Próximo hito',
     nextTitle: 'Registrar una nueva entrega',
     nextDescription: 'Cuando tengas una nueva versión de tu documento, podrás cargarla para iniciar la revisión.',
-    primary: 'Ir a mis avances'
+    primary: 'Subir nuevo avance'
   },
   guide: {
     workspaceTitle: 'Panel de seguimiento',
@@ -76,12 +56,8 @@ const roleProfiles = {
     welcomeTitle: 'Revisa el progreso de tus memoristas.',
     welcomeDescription: 'Consulta las entregas, registra observaciones y acompaña cada etapa de sus memorias.',
     status: '3 revisiones pendientes',
-    progressLabel: 'Carga de revisión',
-    progressTitle: 'Memoristas asignados',
-    progressValue: ['03', '/06'],
-    progressWidth: '50%',
-    progressLabels: ['Asignados', 'En revisión', 'Aprobados'],
     quickTitle: 'Gestiona tu tutoría',
+    quickCount: '3 áreas disponibles',
     areaDescriptions: [
       ['Memoristas', 'Consulta estudiantes y etapas actuales'],
       ['Revisiones', 'Evalúa entregas y registra observaciones'],
@@ -112,14 +88,12 @@ function updateHomeRole(role) {
   welcomeTitle.textContent = profile.welcomeTitle;
   welcomeDescription.textContent = profile.welcomeDescription;
   statusBadge.textContent = profile.status;
-  progressLabel.textContent = profile.progressLabel;
-  progressTitle.textContent = profile.progressTitle;
-  progressValue.innerHTML = `${profile.progressValue[0]}<span>${profile.progressValue[1]}</span>`;
-  progressFill.style.width = profile.progressWidth;
-  progressLabels.forEach((label, index) => { label.textContent = profile.progressLabels[index]; });
   quickTitle.textContent = profile.quickTitle;
-  areaTitles.forEach((title, index) => { title.textContent = profile.areaDescriptions[index][0]; });
-  areaDescriptions.forEach((description, index) => { description.textContent = profile.areaDescriptions[index][1]; });
+  quickCount.textContent = profile.quickCount;
+  quickContent.innerHTML = role === 'guide'
+    ? renderGuideQuickLinks(profile.areaDescriptions)
+    : renderStudentDeliverySummary();
+  if (role === 'student') loadStudentDeliveries();
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
   activityTitle.textContent = profile.activityTitle;
@@ -184,8 +158,12 @@ function renderFeature(section) {
     }
   };
   const feature = features[section];
-
-  featureView.innerHTML = `${featureHeader(section === 'avances' ? 'F-01 · Gestión de avances' : section === 'revisiones' ? 'F-01 · Gestión de avances' : 'F-03 · Autorización de defensa', feature.title, feature.description, isGuide ? 'Profesor Guía' : 'Memorista')}<div class="scenario-content">${feature.body}</div>`;
+  featureView.innerHTML = `${featureHeader(
+    section === 'avances' ? 'F-01 · Gestión de avances' : section === 'revisiones' ? 'F-01 · Gestión de avances' : 'F-03 · Autorización de defensa',
+    feature.title,
+    feature.description,
+    isGuide ? 'Profesor Guía' : 'Memorista'
+  )}<div class="scenario-content">${feature.body}</div>`;
   featureView.hidden = false;
   homeLayout.hidden = true;
   workspace.classList.add('feature-active');
@@ -193,6 +171,59 @@ function renderFeature(section) {
   workspaceNote.textContent = sectionMessages[section];
   setActiveNavigation(section);
   bindFeatureEvents();
+}
+
+function renderStudentDeliverySummary(deliveries = []) {
+  if (deliveries.length === 0) {
+    quickCount.textContent = 'Sin entregas';
+    return `
+      <div class="delivery-empty">
+        <span class="empty-mark">+</span>
+        <strong>No hay avances todavía</strong>
+        <p>Cuando subas tu primer PDF aparecerá aquí con su estado de revisión.</p>
+      </div>
+    `;
+  }
+
+  quickCount.textContent = `${deliveries.length} ${deliveries.length === 1 ? 'entrega' : 'entregas'}`;
+  return `
+    ${deliveries.map((delivery) => `
+      <div class="delivery-row">
+        <span class="delivery-type">PDF</span>
+        <span class="delivery-info"><strong>${delivery.nombreArchivo}</strong><small>${formatDeliveryDate(delivery.fechaEntrega)} · ${formatBytes(delivery.tamanoBytes)}</small></span>
+        <span class="delivery-status ${delivery.estado === 'Revisado' ? 'status-done' : 'status-review'}">${delivery.estado}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function loadStudentDeliveries() {
+  try {
+    const deliveries = await get('/api/avances?estudianteId=202173001');
+    if (roleSelect.value === 'student' && currentSection === 'inicio') {
+      quickContent.innerHTML = renderStudentDeliverySummary(deliveries);
+    }
+  } catch (error) {
+    console.error('No se pudieron cargar las entregas:', error);
+  }
+}
+
+function formatDeliveryDate(value) {
+  return new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium' }).format(new Date(value));
+}
+
+function formatBytes(bytes) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderGuideQuickLinks(areaDescriptions) {
+  return areaDescriptions.map(([title, description], index) => `
+    <button class="area-link" type="button" data-section="${['avances', 'revisiones', 'defensa'][index]}">
+      <span class="area-number">0${index + 1}</span>
+      <span><strong>${title}</strong><small>${description}</small></span>
+      <span class="area-arrow">→</span>
+    </button>
+  `).join('');
 }
 
 function showHome() {
@@ -220,5 +251,7 @@ roleSelect.addEventListener('change', (event) => {
   if (currentSection === 'inicio') showHome();
   else renderFeature(currentSection);
 });
+
+window.addEventListener('advance:created', loadStudentDeliveries);
 
 updateHomeRole('student');

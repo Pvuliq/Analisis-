@@ -981,11 +981,14 @@ h1 {
   transition: background 160ms ease, transform 160ms ease;
 }
 
+<<<<<<< HEAD
+=======
 .action-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
+>>>>>>> respaldo/main
 .action-button:hover {
   background: var(--teal);
   transform: translateY(-3px);
@@ -1251,6 +1254,97 @@ textarea:focus {
   font: 1.35rem Arial, sans-serif;
 }
 
+<<<<<<< HEAD
+.delivery-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 8px 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.delivery-empty {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+  margin-top: 24px;
+  padding: 22px 0;
+  border-top: 1px dashed var(--line);
+}
+
+.delivery-empty strong {
+  color: var(--navy);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.delivery-empty p {
+  max-width: 430px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.delivery-type {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 38px;
+  color: var(--coral);
+  border: 1px solid var(--coral);
+  font: 700 0.58rem Arial, sans-serif;
+}
+
+.delivery-info {
+  min-width: 0;
+}
+
+.delivery-info strong,
+.delivery-info small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delivery-info strong {
+  color: var(--navy);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.delivery-info small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.delivery-status {
+  padding: 7px 9px;
+  font: 700 0.62rem Arial, sans-serif;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.status-review {
+  color: #80621a;
+  background: #f5e8bd;
+}
+
+.status-done {
+  color: #226b70;
+  background: #d7eeee;
+}
+
+.next-milestone .primary-button {
+  padding: 16px 21px;
+  font-size: 0.84rem;
+}
+
+=======
+>>>>>>> respaldo/main
 .activity-panel {
   grid-column: 2;
   grid-row: 2 / span 2;

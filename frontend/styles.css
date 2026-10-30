@@ -981,6 +981,14 @@ h1 {
   transition: background 160ms ease, transform 160ms ease;
 }
 
+<<<<<<< HEAD
+=======
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+>>>>>>> respaldo/main
 .action-button:hover {
   background: var(--teal);
   transform: translateY(-3px);
@@ -1246,6 +1254,7 @@ textarea:focus {
   font: 1.35rem Arial, sans-serif;
 }
 
+<<<<<<< HEAD
 .delivery-row {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
@@ -1334,6 +1343,8 @@ textarea:focus {
   font-size: 0.84rem;
 }
 
+=======
+>>>>>>> respaldo/main
 .activity-panel {
   grid-column: 2;
   grid-row: 2 / span 2;

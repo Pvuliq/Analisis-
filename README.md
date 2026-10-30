@@ -132,3 +132,16 @@ Además, pueden poner en su navegador ```localhost:8080``` y/o ```localhost:8081
 ![Ejemplo3](img/navegador.png)
 
 ### Enjoy!
+
+Pasos seguidos para el levantamiento:
+
+Capturas de pantalla:
+
+* Ejecutar "docker compose up --build -d" en "API_TRAMITACION":
+![Consola1](img/docker_compose_tramitacion.png)
+
+* Ejecutar "docker compose up --build -d" en "API_VALIDACIONES":
+![Consola2](img/docker_compose_validaciones.png)
+
+* Docker Desktop con todos los contenedores iniciados en su totalidad:
+![Docker1](img/docker_desktop_levantado.png)

@@ -145,3 +145,9 @@ Capturas de pantalla:
 
 * Docker Desktop con todos los contenedores iniciados en su totalidad:
 ![Docker1](img/docker_desktop_levantado.png)
+
+## Prototipo
+* [Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)
+* Para ejecutar el prototipo, ejecute el siguiente comando dentro de la carpeta del proyecto:
+  ```bash
+  python3 -m http.server 5500

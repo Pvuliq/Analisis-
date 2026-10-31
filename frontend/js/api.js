@@ -34,6 +34,27 @@ export function post(endpoint, body, options = {}) {
   });
 }
 
+export async function postFile(endpoint, formData, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    method: 'POST',
+    body: formData,
+    headers: options.headers || {}
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const message = typeof data === 'string' ? data : data.message;
+    throw new Error(message || `Request failed with status ${response.status}`);
+  }
+
+  return data;
+}
+
 export function put(endpoint, body, options = {}) {
   return apiRequest(endpoint, {
     ...options,

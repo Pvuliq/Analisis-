@@ -4,6 +4,7 @@ const createTable = (req, res) => {
     const query = `
         CREATE TABLE IF NOT EXISTS revisiones (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            avanceId INT NULL,
             documento VARCHAR(255) DEFAULT 'Avance_memoria_v03.pdf',
             profesor_id INT DEFAULT 1,
             observaciones TEXT NOT NULL,
@@ -19,19 +20,32 @@ const createTable = (req, res) => {
 };
 
 const guardarRevision = (req, res) => {
-    const { observaciones, resultado, documento = 'Avance_memoria_v03.pdf' } = req.body;
+    const { observaciones, resultado } = req.body;
+    const avanceId = Number(req.body.avanceId ?? req.body.id_avance);
 
-    if (!observaciones || !resultado) {
-        return res.status(400).json({ error: 'Observaciones y resultado son obligatorios' });
+    if (!observaciones || !resultado || !Number.isInteger(avanceId) || avanceId <= 0) {
+        return res.status(400).json({ error: 'avanceId, observaciones y resultado son obligatorios' });
     }
 
-    const query = 'INSERT INTO revisiones (documento, observaciones, resultado) VALUES (?, ?, ?)';
+    const insertQuery = `
+        INSERT INTO revisiones (avanceId, documento, observaciones, resultado)
+        SELECT avanceId, nombreArchivo, ?, ?
+        FROM avances
+        WHERE avanceId = ?
+    `;
 
-    database.query(query, [documento, observaciones, resultado], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+    database.query(insertQuery, [observaciones, resultado, avanceId], (err, result) => {
+        if (err) {
+            console.error('No se pudo guardar la revisión:', err);
+            return res.status(500).json({ message: 'No se pudo guardar la revisión.' });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'No existe el avance que se intenta revisar' });
+        }
         res.status(201).json({
             message: 'Revisión guardada',
             id: result.insertId,
+            avanceId,
             resultado
         });
     });

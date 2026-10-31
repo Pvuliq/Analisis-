@@ -981,6 +981,10 @@ h1 {
   transition: background 160ms ease, transform 160ms ease;
 }
 
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .action-button:hover {
   background: var(--teal);
   transform: translateY(-3px);
@@ -1333,7 +1337,6 @@ textarea:focus {
   padding: 16px 21px;
   font-size: 0.84rem;
 }
-
 .activity-panel {
   grid-column: 2;
   grid-row: 2 / span 2;

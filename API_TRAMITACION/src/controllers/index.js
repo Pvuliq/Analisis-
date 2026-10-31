@@ -36,7 +36,8 @@ const createAdvance = (req, res) => {
             archivoPdf LONGBLOB NOT NULL,
             tamanoBytes INT NOT NULL,
             fechaEntrega DATETIME NOT NULL,
-            estado VARCHAR(50) NOT NULL
+            estado VARCHAR(50) NOT NULL,
+            esVersionFinal TINYINT(1) NOT NULL DEFAULT 0
         )
     `;
 
@@ -46,10 +47,11 @@ const createAdvance = (req, res) => {
         }
 
         const fechaEntrega = new Date();
+        const esVersionFinal = req.body.esVersionFinal === 'true';
         const insertAdvance = `
             INSERT INTO avances
-                (estudianteId, nombreArchivo, archivoPdf, tamanoBytes, fechaEntrega, estado)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (estudianteId, nombreArchivo, archivoPdf, tamanoBytes, fechaEntrega, estado, esVersionFinal)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const values = [
             estudianteId,
@@ -57,22 +59,65 @@ const createAdvance = (req, res) => {
             req.file.buffer,
             req.file.size,
             fechaEntrega,
-            'Esperando revisión'
+            'Esperando revisión',
+            esVersionFinal
         ];
 
-        database.query(insertAdvance, values, (insertError, result) => {
-            if (insertError) {
+        database.getConnection((connectionError, connection) => {
+            if (connectionError) {
+                console.error('No se pudo obtener una conexión para registrar el avance:', connectionError);
                 return res.status(500).json({ message: 'No se pudo registrar el avance.' });
             }
 
-            return res.status(201).json({
-                avanceId: result.insertId,
-                estudianteId,
-                nombreArchivo: req.file.originalname,
-                tamanoBytes: req.file.size,
-                fechaEntrega: fechaEntrega.toISOString(),
-                estado: 'Esperando revisión',
-                mensaje: 'Avance registrado exitosamente.'
+            connection.beginTransaction((transactionError) => {
+                if (transactionError) {
+                    connection.release();
+                    console.error('No se pudo iniciar el registro del avance:', transactionError);
+                    return res.status(500).json({ message: 'No se pudo registrar el avance.' });
+                }
+
+                const rollback = (error) => {
+                    connection.rollback((rollbackError) => {
+                        connection.release();
+                        if (rollbackError) {
+                            console.error('No se pudo revertir el registro del avance:', rollbackError);
+                        }
+                        console.error('No se pudo registrar el avance:', error);
+                        res.status(500).json({ message: 'No se pudo registrar el avance.' });
+                    });
+                };
+
+                const insert = () => {
+                    connection.query(insertAdvance, values, (insertError, result) => {
+                        if (insertError) return rollback(insertError);
+
+                        connection.commit((commitError) => {
+                            if (commitError) return rollback(commitError);
+                            connection.release();
+                            return res.status(201).json({
+                                avanceId: result.insertId,
+                                estudianteId,
+                                nombreArchivo: req.file.originalname,
+                                tamanoBytes: req.file.size,
+                                fechaEntrega: fechaEntrega.toISOString(),
+                                estado: 'Esperando revisión',
+                                esVersionFinal,
+                                mensaje: 'Avance registrado exitosamente.'
+                            });
+                        });
+                    });
+                };
+
+                if (!esVersionFinal) return insert();
+
+                connection.query(
+                    'UPDATE avances SET esVersionFinal = 0 WHERE estudianteId = ?',
+                    [estudianteId],
+                    (updateError) => {
+                        if (updateError) return rollback(updateError);
+                        insert();
+                    }
+                );
             });
         });
     });
@@ -87,7 +132,7 @@ const listAdvances = (req, res) => {
 
     const query = `
         SELECT avanceId, estudianteId, nombreArchivo, tamanoBytes,
-               fechaEntrega, estado
+               fechaEntrega, estado, esVersionFinal
         FROM avances
         WHERE estudianteId = ?
         ORDER BY fechaEntrega DESC

@@ -1,43 +1,166 @@
+import { post, get } from './api.js';
+
+const DEMO_STUDENT_ID = '202173001';
+
+function renderAdvanceSelector() {
+  return `
+    <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
+    <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus">
+      <option value="">Cargando avances...</option>
+    </select>
+    <p class="decision-feedback" id="reviewAdvanceStatus" role="status">Consultando avances...</p>
+  `;
+}
+
 export function renderReviews(isGuide) {
   if (isGuide) {
     return `
       <div class="scenario-grid">
         <section class="interaction-panel review-panel">
           <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
-          <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status">Revisado</span></div>
+          <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span></div>
+          ${renderAdvanceSelector()}
           <label class="field-label" for="reviewNotes">Observaciones para el memorista</label>
           <textarea id="reviewNotes" rows="4" placeholder="Escribe las correcciones y comentarios de esta versión..."></textarea>
-          <div class="decision-actions"><button class="action-button review-decision" type="button">Avance suficiente</button><button class="secondary-button review-decision" type="button">Necesita correcciones</button></div>
+          <div class="decision-actions">
+            <button class="action-button review-decision" data-decision="Avance suficiente" type="button">Avance suficiente</button>
+            <button class="secondary-button review-decision" data-decision="Necesita correcciones" type="button">Necesita correcciones</button>
+          </div>
           <p class="decision-feedback" id="reviewFeedback">Indica si esta versión cumple con el estándar esperado.</p>
         </section>
-        <aside class="evidence-panel"><p class="section-label">Estado de la revisión</p><strong id="reviewState">Revisado</strong><p>Las observaciones quedan vinculadas a esta versión y se notifica al estudiante.</p><span class="decision-tag">F-01 · HU-02</span></aside>
+        <aside class="evidence-panel">
+          <p class="section-label">Estado de la revisión</p>
+          <strong id="reviewState">Sin evaluar</strong>
+          <p>Las observaciones quedan guardadas en la base de datos y se notifican al estudiante.</p>
+          <span class="decision-tag">F-01 · HU-02</span>
+        </aside>
       </div>
     `;
   }
 
   return `
-    <div class="scenario-grid">
-      <section class="interaction-panel"><div class="panel-topline"><span class="story-symbol">02</span><span>Mis revisiones</span></div><h4>Observaciones del Profesor Guía</h4><p>Aquí aparecerán las correcciones asociadas a tus entregas cuando sean revisadas.</p><div class="empty-review">No hay observaciones nuevas para mostrar.</div></section>
-      <aside class="evidence-panel"><p class="section-label">Estado</p><strong>En espera de revisión</strong><p>Recibirás una notificación cuando el profesor registre sus comentarios.</p></aside>
+    <div class="scenario-grid" data-review-student-id="${DEMO_STUDENT_ID}">
+      <section class="interaction-panel">
+        <div class="panel-topline"><span class="story-symbol">03</span><span>Mis revisiones</span></div>
+        <h4>Observaciones del Profesor Guía</h4>
+        <div id="studentFeedbackArea" class="empty-review">Consultando observaciones en el servidor...</div>
+      </section>
+      <aside class="evidence-panel">
+        <p class="section-label">Estado</p>
+        <strong>En seguimiento</strong>
+        <p>Aquí aparecen los comentarios registrados por tu profesor.</p>
+      </aside>
     </div>
   `;
 }
 
 export function bindReviewEvents(root = document) {
-  root.querySelectorAll('.review-decision').forEach((button) => {
-    button.addEventListener('click', () => {
-      const reviewState = root.querySelector('#reviewState');
-      const reviewFeedback = root.querySelector('#reviewFeedback');
+  const buttons = root.querySelectorAll('.review-decision');
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const textarea = root.querySelector('#reviewNotes');
+      const advanceSelect = root.querySelector('#reviewAdvance');
+      const feedback = root.querySelector('#reviewFeedback');
+      const state = root.querySelector('#reviewState');
+      const tag = root.querySelector('#reviewTag');
+      
+      const observaciones = textarea.value.trim();
+      const resultado = button.dataset.decision || button.textContent.trim();
+      const avanceId = Number(advanceSelect?.value);
 
-      if (reviewState) reviewState.textContent = 'Revisado';
-      if (reviewFeedback) {
-        reviewFeedback.textContent = button.textContent === 'Avance suficiente'
-          ? 'La versión cumple con el estándar esperado.'
-          : 'Se notificará al memorista que debe realizar correcciones.';
+      if (!observaciones || !Number.isInteger(avanceId) || avanceId <= 0) {
+        feedback.textContent = !observaciones
+          ? 'Ingresa una observación o comentario antes de evaluar.'
+          : 'Selecciona la versión que estás revisando.';
+        feedback.style.color = '#c0392b';
+        return;
       }
 
-      root.querySelectorAll('.review-decision').forEach((item) => item.classList.remove('is-selected'));
-      button.classList.add('is-selected');
+      feedback.textContent = 'Guardando revisión...';
+      feedback.style.color = 'var(--muted)';
+
+      try {
+        await post('/api/revisiones', {
+          avanceId,
+          observaciones: observaciones,
+          resultado: resultado
+        });
+
+        if (state) state.textContent = 'Revisado';
+        if (tag) tag.textContent = 'Revisado';
+        feedback.style.color = 'var(--teal)';
+        feedback.textContent = `Guardado: "${resultado}" registrado correctamente.`;
+
+        buttons.forEach((item) => item.classList.remove('is-selected'));
+        button.classList.add('is-selected');
+        root.dispatchEvent(new CustomEvent('review:created', {
+          bubbles: true,
+          detail: { avanceId, resultado }
+        }));
+      } catch (err) {
+        feedback.style.color = '#c0392b';
+        feedback.textContent = `Error al guardar: ${err.message}`;
+      }
     });
   });
+
+  const studentFeedbackArea = root.querySelector('#studentFeedbackArea');
+  const reviewAdvance = root.querySelector('#reviewAdvance');
+  const reviewAdvanceStatus = root.querySelector('#reviewAdvanceStatus');
+  const reviewStudentId = root.querySelector('[data-review-student-id]')?.dataset.reviewStudentId
+    || DEMO_STUDENT_ID;
+
+  if (reviewAdvance) {
+    get(`/api/avances?estudianteId=${encodeURIComponent(reviewStudentId)}`)
+      .then((advances) => {
+        if (!Array.isArray(advances)) {
+          throw new Error('El servidor devolvió una lista de avances inválida.');
+        }
+
+        if (advances.length === 0) {
+          reviewAdvance.innerHTML = '<option value="">No hay avances para revisar</option>';
+          if (reviewAdvanceStatus) reviewAdvanceStatus.textContent = 'Primero debe registrarse un avance.';
+          return;
+        }
+
+        reviewAdvance.replaceChildren(...advances.map((advance) => {
+          const option = document.createElement('option');
+          option.value = advance.avanceId;
+          option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+          return option;
+        }));
+        if (reviewAdvanceStatus) {
+          reviewAdvanceStatus.textContent = 'La revisión quedará asociada a la versión seleccionada.';
+        }
+      })
+      .catch((error) => {
+        reviewAdvance.innerHTML = '<option value="">No se pudieron cargar los avances</option>';
+        if (reviewAdvanceStatus) {
+          reviewAdvanceStatus.textContent = `Error al cargar los avances: ${error.message}`;
+        }
+      });
+  }
+
+  if (studentFeedbackArea) {
+    get('/api/revisiones')
+      .then((res) => {
+        const lista = Array.isArray(res) ? res : (res.revisiones || []);
+
+        if (lista.length === 0) {
+          studentFeedbackArea.textContent = 'No hay observaciones nuevas para mostrar.';
+          return;
+        }
+
+        studentFeedbackArea.innerHTML = lista.map((rev) => `
+          <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--coral); background: #ffffff;">
+            <strong>Resultado: ${rev.resultado || rev.estado || 'Revisado'}</strong>
+            <p style="margin: 8px 0 4px; color: var(--ink);">${rev.observaciones}</p>
+            <small style="color: var(--muted);">${new Date(rev.fecha_revision).toLocaleString()}</small>
+          </div>
+        `).join('');
+      })
+      .catch((err) => {
+        studentFeedbackArea.textContent = `Error al cargar revisiones: ${err.message}`;
+      });
+  }
 }

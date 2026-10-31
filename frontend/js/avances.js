@@ -9,6 +9,8 @@ export function renderStudentAdvances() {
         <p>Adjunta una nueva versión para registrarla como entrega oficial del proceso.</p>
         <label class="file-picker" for="advanceFile">Seleccionar archivo PDF</label>
         <input id="advanceFile" class="visually-hidden" type="file" accept="application/pdf">
+        <label class="field-label" for="finalVersion">¿Es la versión final del documento?</label>
+        <input id="finalVersion" type="checkbox">
         <div class="file-well"><span class="file-icon">PDF</span><div><strong id="selectedFile">Avance_memoria_v03.pdf</strong><small id="selectedFileMeta">2.4 MB · listo para enviar</small></div><span class="file-state" id="fileState">OK</span></div>
         <button class="action-button" id="uploadAction" type="button">Registrar entrega</button>
       </section>
@@ -65,6 +67,7 @@ export function bindAdvanceEvents(root = document) {
     const formData = new FormData();
     formData.append('archivoPdf', file);
     formData.append('estudianteId', '202173001');
+    formData.append('esVersionFinal', String(root.querySelector('#finalVersion')?.checked ?? false));
 
     uploadAction.disabled = true;
     uploadAction.textContent = 'Subiendo avance...';

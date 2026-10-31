@@ -1,4 +1,4 @@
-import { post } from './api.js';
+import { post, get } from './api.js';
 
 export function renderReviews(isGuide) {
   if (isGuide) {
@@ -27,8 +27,16 @@ export function renderReviews(isGuide) {
 
   return `
     <div class="scenario-grid">
-      <section class="interaction-panel"><div class="panel-topline"><span class="story-symbol">02</span><span>Mis revisiones</span></div><h4>Observaciones del Profesor Guía</h4><p>Aquí aparecerán las correcciones asociadas a tus entregas cuando sean revisadas.</p><div class="empty-review">No hay observaciones nuevas para mostrar.</div></section>
-      <aside class="evidence-panel"><p class="section-label">Estado</p><strong>En espera de revisión</strong><p>Recibirás una notificación cuando el profesor registre sus comentarios.</p></aside>
+      <section class="interaction-panel">
+        <div class="panel-topline"><span class="story-symbol">03</span><span>Mis revisiones</span></div>
+        <h4>Observaciones del Profesor Guía</h4>
+        <div id="studentFeedbackArea" class="empty-review">Consultando observaciones en el servidor...</div>
+      </section>
+      <aside class="evidence-panel">
+        <p class="section-label">Estado</p>
+        <strong>En seguimiento</strong>
+        <p>Aquí aparecen los comentarios registrados por tu profesor.</p>
+      </aside>
     </div>
   `;
 }
@@ -56,6 +64,7 @@ export function bindReviewEvents(root = document) {
 
       try {
         await post('/api/revisiones', {
+          id_avance: 1,
           documento: 'Avance_memoria_v03.pdf',
           observaciones: observaciones,
           resultado: resultado
@@ -74,4 +83,28 @@ export function bindReviewEvents(root = document) {
       }
     });
   });
+
+  const studentFeedbackArea = root.querySelector('#studentFeedbackArea');
+  if (studentFeedbackArea) {
+    get('/api/revisiones')
+      .then((res) => {
+        const lista = Array.isArray(res) ? res : (res.revisiones || []);
+
+        if (lista.length === 0) {
+          studentFeedbackArea.textContent = 'No hay observaciones nuevas para mostrar.';
+          return;
+        }
+
+        studentFeedbackArea.innerHTML = lista.map((rev) => `
+          <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--coral); background: #ffffff;">
+            <strong>Resultado: ${rev.resultado || rev.estado || 'Revisado'}</strong>
+            <p style="margin: 8px 0 4px; color: var(--ink);">${rev.observaciones}</p>
+            <small style="color: var(--muted);">${new Date(rev.fecha_revision).toLocaleString()}</small>
+          </div>
+        `).join('');
+      })
+      .catch((err) => {
+        studentFeedbackArea.textContent = `Error al cargar revisiones: ${err.message}`;
+      });
+  }
 }

@@ -37,7 +37,17 @@ const guardarRevision = (req, res) => {
     });
 };
 
+const obtenerRevisiones = (req, res) => {
+    const query = 'SELECT * FROM revisiones ORDER BY fecha_revision DESC';
+
+    database.query(query, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+};
+
 module.exports = {
     createTable,
     guardarRevision,
+    obtenerRevisiones
 };

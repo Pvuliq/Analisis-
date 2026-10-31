@@ -23,6 +23,7 @@ router.get('/createTable', index.createTable);
 router.post('/api/avances', upload.single('archivoPdf'), index.createAdvance);
 router.get('/api/avances', index.listAdvances);
 router.use('/api/revisiones', require('./revisionesRoutes'));
+router.use('/api/defensas', require('./defensasRoutes'));
 
 router.use((error, req, res, next) => {
 	if (!(error instanceof multer.MulterError)) return next(error);

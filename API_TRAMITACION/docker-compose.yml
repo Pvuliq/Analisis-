@@ -1,6 +1,14 @@
 version: "3.4"
 
 services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "password"
+      MYSQL_DATABASE: "BD02_TRAMITACION"
+    ports:
+      - "3306:3306"
+
   api_tramitacion:
     image: api_tramitacion
     build:
@@ -8,4 +16,7 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - "8080:8080"
-
+    env_file:
+      - .env
+    depends_on:
+      - db

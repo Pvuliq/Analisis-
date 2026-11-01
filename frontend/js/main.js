@@ -1,5 +1,5 @@
 import { bindAdvanceEvents, renderGuideAdvances, renderStudentAdvances } from './avances.js';
-import { bindReviewEvents, renderReviews } from './revisiones.js';
+import { bindReviewEvents, renderReviews, cargarEntregasPendientes } from './revisiones.js';
 import { bindDefenseEvents, renderDefense, renderGuideReviewAndDefense } from './defensa.js';
 import { get } from './api.js';
 
@@ -171,6 +171,9 @@ function renderFeature(section) {
   workspaceNote.textContent = sectionMessages[section];
   setActiveNavigation(section);
   bindFeatureEvents();
+    if (isGuide && section === 'revisiones') {
+      cargarEntregasPendientes(featureView);
+    }
 }
 
 function renderStudentDeliverySummary(deliveries = []) {

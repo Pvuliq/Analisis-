@@ -107,3 +107,51 @@ export function bindReviewEvents(root = document) {
       });
   }
 }
+
+export async function cargarEntregasPendientes(root) {
+  const listaEntregas = root.querySelector('#listaEntregas');
+  const listaContainer = root.querySelector('#listaEntregasContainer');
+  const formRevision = root.querySelector('#formularioRevision');
+  const docNombre = root.querySelector('#docSeleccionadoNombre');
+  const btnCancelar = root.querySelector('#btnCancelarRevision');
+
+  if (!listaEntregas) return;
+
+  try {
+    const entregas = await get('/api/revisiones/pendientes');
+
+    if (!entregas || entregas.length === 0) {
+      listaEntregas.innerHTML = '<div class="empty-review">No hay entregas pendientes de revisión.</div>';
+      return;
+    }
+
+    listaEntregas.innerHTML = entregas.map(entrega => `
+      <div class="file-well" style="cursor: pointer;" data-nombre="${entrega.nombreArchivo}">
+        <span class="file-icon">PDF</span>
+        <div>
+          <strong>${entrega.nombreArchivo}</strong>
+          <small>ID Estudiante: ${entrega.estudianteId || 'N/A'} · ${new Date(entrega.fechaEntrega).toLocaleDateString()}</small>
+        </div>
+        <button class="secondary-button btn-seleccionar" type="button">Seleccionar</button>
+      </div>
+    `).join('');
+
+    listaEntregas.querySelectorAll('.file-well').forEach(item => {
+      item.querySelector('.btn-seleccionar').addEventListener('click', () => {
+        docNombre.textContent = item.dataset.nombre;
+        listaContainer.style.display = 'none';
+        formRevision.style.display = 'block';
+      });
+    });
+
+    if (btnCancelar) {
+      btnCancelar.addEventListener('click', () => {
+        formRevision.style.display = 'none';
+        listaContainer.style.display = 'block';
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    listaEntregas.innerHTML = '<div class="empty-review">Error al cargar las entregas. Verifica que el backend esté corriendo.</div>';
+  }
+}

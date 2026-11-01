@@ -3,15 +3,32 @@ export function renderGuideReviewAndDefense() {
     <div class="combined-review-layout">
       <section class="interaction-panel review-panel">
         <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
-        <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span></div>
-        <label class="field-label" for="reviewNotes">Observaciones para el memorista</label>
-        <textarea id="reviewNotes" rows="4" placeholder="Escribe las correcciones y comentarios de esta versión..."></textarea>
-        <div class="decision-actions">
-          <button class="action-button review-decision" data-decision="Avance suficiente" type="button">Avance suficiente</button>
-          <button class="secondary-button review-decision" data-decision="Necesita correcciones" type="button">Necesita correcciones</button>
+
+        <!-- Contenedor dinámico de entregas -->
+        <div id="listaEntregasContainer">
+            <h4>Entregas pendientes</h4>
+            <p>Selecciona una entrega para evaluarla.</p>
+            <div id="listaEntregas" style="display: grid; gap: 10px; margin-bottom: 20px;">Cargando...</div>
         </div>
-        <p class="decision-feedback" id="reviewFeedback">Indica si esta versión cumple con el estándar esperado.</p>
+
+        <!-- Formulario oculto hasta que se seleccione una entrega -->
+        <div id="formularioRevision" style="display: none; border-top: 1px solid var(--line); padding-top: 20px;">
+            <div class="review-document">
+                <span class="file-icon">PDF</span>
+                <div><strong id="docSeleccionadoNombre">Documento</strong><small>Versión seleccionada</small></div>
+                <span class="review-status">En revisión</span>
+            </div>
+            <label class="field-label" for="reviewNotes">Observaciones para el memorista</label>
+            <textarea id="reviewNotes" rows="4" placeholder="Escribe las correcciones y comentarios..."></textarea>
+            <div class="decision-actions">
+                <button class="action-button review-decision" type="button">Avance suficiente</button>
+                <button class="secondary-button review-decision" type="button">Necesita correcciones</button>
+                <button class="secondary-button" id="btnCancelarRevision" type="button" style="margin-left: auto;">Volver</button>
+            </div>
+            <p class="decision-feedback" id="reviewFeedback">Indica si esta versión cumple con el estándar esperado.</p>
+        </div>
       </section>
+
       <section class="interaction-panel compact-approval-panel">
         <div class="panel-topline"><span class="story-symbol">03</span><span>HU-07 · Defensa</span></div>
         <h4>Checklist de la memoria</h4>

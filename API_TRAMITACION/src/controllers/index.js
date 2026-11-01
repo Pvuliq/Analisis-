@@ -102,8 +102,29 @@ const listAdvances = (req, res) => {
     });
 };
 
+const listPendingReviews = (req, res) => {
+    const query = `
+        SELECT avanceId, estudianteId, nombreArchivo, tamanoBytes,
+               fechaEntrega, estado
+        FROM avances
+        WHERE estado = 'Esperando revisión'
+        ORDER BY fechaEntrega ASC
+    `;
+
+    database.query(query, (error, rows) => {
+        if (error) {
+            // Retorna un arreglo vacío si la tabla aún no existe o hay error
+            if (error.code === 'ER_NO_SUCH_TABLE') return res.json([]);
+            return res.status(500).json({ message: 'No se pudieron consultar las entregas pendientes.' });
+        }
+
+        return res.json(rows);
+    });
+};
+
 module.exports = {
     createTable,
     createAdvance,
-    listAdvances
+    listAdvances,
+    listPendingReviews
 };

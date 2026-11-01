@@ -15,9 +15,9 @@ Documentación del proyecto en la Wiki en el siguiente [enlace](https://gitlab.i
 
 ## Aspectos técnicos relevantes
 
-_Todo aspecto relevante para poder usar el proyecto o consideraciones del proyecto base a ser entregado_
-
-_Nada por el momento..._
+- Se utilizó DBeaver para administrar y verificar las bases de datos MySQL.
+- Es muy importante haber completado el levantamiento de los contenedores Docker y verificar que las API estén en ejecución antes de interactuar con el frontend.
+- Las instrucciones detalladas para servir y visualizar la página web se encuentran en la sección final de este README.
 
 ## Requerimientos
 
@@ -148,6 +148,28 @@ Capturas de pantalla:
 
 ## Prototipo
 * [Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)
-* Para ejecutar el prototipo, ejecute el siguiente comando dentro de la carpeta del proyecto:
-  ```bash
-  python3 -m http.server 5500
+
+## Pasos extras a seguir luego del levantamiento para revisar la página web
+
+- Muy importante: revisar que todas las APIs o contenedores de Docker estén corriendo y que estén creadas las bases de datos pedidas al inicio.
+
+### 1. Iniciar el servidor local del Frontend
+
+Desde la terminal, sitúate en la carpeta raíz del proyecto y ejecuta:
+
+```bash
+python3 -m http.server 5504 --directory frontend
+```
+
+o bien:
+
+```bash
+cd frontend
+python -m http.server 5504
+```
+
+- El número de puerto se puede cambiar en caso de que esté ocupado.
+
+### 2. Abrir en el navegador
+
+http://localhost:5504

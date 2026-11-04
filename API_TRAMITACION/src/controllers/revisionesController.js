@@ -60,8 +60,27 @@ const obtenerRevisiones = (req, res) => {
     });
 };
 
+const obtenerPendientes = (req, res) => {
+    const query = `
+        SELECT a.avanceId, a.estudianteId, a.nombreArchivo, 
+               a.tamanoBytes, a.fechaEntrega, a.estado, a.esVersionFinal
+        FROM avances a
+        LEFT JOIN revisiones r ON a.avanceId = r.avanceId
+        WHERE r.id IS NULL
+        ORDER BY a.fechaEntrega ASC
+    `;
+
+    database.query(query, (error, rows) => {
+        if (error) {
+            return res.status(500).json({ message: 'No se pudieron consultar las entregas pendientes.' });
+        }
+        return res.json(rows);
+    });
+};
+
 module.exports = {
     createTable,
     guardarRevision,
-    obtenerRevisiones
+    obtenerRevisiones,
+    obtenerPendientes
 };

@@ -1,14 +1,6 @@
 version: "3.4"
 
 services:
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: "password"
-      MYSQL_DATABASE: "BD02_TRAMITACION"
-    ports:
-      - "3306:3306"
-
   api_tramitacion:
     image: api_tramitacion
     build:
@@ -16,7 +8,10 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - "8080:8080"
-    env_file:
-      - .env
-    depends_on:
-      - db
+    environment:
+      - PORT_API=8080
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=BD02_TRAMITACION
+      - DB_PORT=3306
+      - DB_HOST=host.docker.internal

@@ -149,6 +149,40 @@ const listAdvances = (req, res) => {
     });
 };
 
+const listStudentActivity = (req, res) => {
+    const estudianteId = String(req.query.estudianteId || '').trim();
+    if (!/^\d{8,9}-[\dKk]$/.test(estudianteId)) {
+        return res.status(400).json({ message: 'estudianteId debe tener formato ROL, por ejemplo 202473021-5.' });
+    }
+
+    const query = `
+        SELECT tipo, referenciaId, fecha, nombreArchivo, observaciones, resultado
+        FROM (
+            SELECT 'entrega' AS tipo, a.avanceId AS referenciaId, a.fechaEntrega AS fecha,
+                   a.nombreArchivo, NULL AS observaciones, NULL AS resultado
+            FROM avances a
+            WHERE a.estudianteId = ?
+            UNION ALL
+            SELECT 'revision' AS tipo, r.id AS referenciaId, r.fecha_revision AS fecha,
+                   a.nombreArchivo, r.observaciones, r.resultado
+            FROM revisiones r
+            INNER JOIN avances a ON a.avanceId = r.avanceId
+            WHERE a.estudianteId = ?
+        ) AS actividad
+        ORDER BY fecha DESC
+        LIMIT 20
+    `;
+
+    database.query(query, [estudianteId, estudianteId], (error, rows) => {
+        if (error) {
+            console.error('No se pudo consultar la actividad del estudiante:', error);
+            return res.status(500).json({ message: 'No se pudo consultar la actividad del estudiante.' });
+        }
+
+        return res.json(rows);
+    });
+};
+
 const downloadAdvance = (req, res) => {
     const avanceId = Number(req.params.id);
     if (!Number.isInteger(avanceId) || avanceId <= 0) {
@@ -179,5 +213,6 @@ module.exports = {
     createTable,
     createAdvance,
     listAdvances,
+    listStudentActivity,
     downloadAdvance
 };

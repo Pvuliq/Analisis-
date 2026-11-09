@@ -94,7 +94,10 @@ function updateHomeRole(role) {
   quickContent.innerHTML = role === 'guide'
     ? renderGuideQuickLinks()
     : renderStudentDeliverySummary();
-  if (role === 'student') loadStudentDeliveries();
+  if (role === 'student') {
+    loadStudentDeliveries();
+    loadStudentActivity();
+  }
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
   activityTitle.textContent = profile.activityTitle;
@@ -209,6 +212,72 @@ async function loadStudentDeliveries() {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[character]));
+}
+
+function formatActivityDate(value) {
+  return new Intl.DateTimeFormat('es-CL', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(value));
+}
+
+function renderStudentActivity(activity = []) {
+  if (activity.length === 0) {
+    activityMeta.textContent = 'Últimos movimientos';
+    return `
+      <span class="empty-mark">+</span>
+      <strong>Aún no hay actividad</strong>
+      <p>Tus entregas y revisiones aparecerán aquí.</p>
+    `;
+  }
+
+  activityMeta.textContent = `${activity.length} ${activity.length === 1 ? 'movimiento' : 'movimientos'}`;
+  return `
+    <div class="activity-list">
+      ${activity.map((item) => {
+        const isReview = item.tipo === 'revision';
+        const title = isReview ? 'Recibiste una observación' : 'Subiste un avance';
+        const description = isReview
+          ? `${item.nombreArchivo}: ${item.observaciones || 'El profesor revisó tu entrega.'}`
+          : `Registraste ${item.nombreArchivo} para revisión.`;
+        return `
+          <article class="activity-item">
+            <span class="activity-icon">${isReview ? '!' : '↑'}</span>
+            <div>
+              <strong>${title}</strong>
+              <p>${escapeHtml(description)}</p>
+              <small>${escapeHtml(formatActivityDate(item.fecha))}</small>
+            </div>
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function loadStudentActivity() {
+  try {
+    const user = getCurrentUser();
+    const estudianteId = user?.estudianteId || user?.rut;
+    if (!estudianteId || activeRole !== 'student') return;
+
+    const activity = await get(`/api/actividad?estudianteId=${encodeURIComponent(estudianteId)}`);
+    if (activeRole === 'student' && currentSection === 'inicio') {
+      document.querySelector('#activityContent').innerHTML = renderStudentActivity(activity);
+    }
+  } catch (error) {
+    console.error('No se pudo cargar la actividad del estudiante:', error);
+  }
+}
+
 function formatDeliveryDate(value) {
   return new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium' }).format(new Date(value));
 }
@@ -252,7 +321,10 @@ document.addEventListener('click', (event) => {
   else renderFeature(section);
 });
 
-window.addEventListener('advance:created', loadStudentDeliveries);
+window.addEventListener('advance:created', () => {
+  loadStudentDeliveries();
+  loadStudentActivity();
+});
 
 const currentUser = getCurrentUser();
 if (currentUser) {

@@ -38,7 +38,10 @@
         <strong id="loggedRole"></strong>
       </div>
       <div class="user-session">
-        <span id="loggedUser"></span>
+        <span class="user-identity">
+          <strong id="loggedUser"></strong>
+          <small id="loggedStudentRole"></small>
+        </span>
         <button id="logoutButton" type="button" hidden>Cerrar sesión</button>
       </div>
     </header>
@@ -78,7 +81,7 @@
             <p class="section-label" id="activityLabel">Actividad reciente</p>
             <span id="activityMeta">Últimos movimientos</span>
           </div>
-          <div class="empty-activity">
+          <div class="empty-activity" id="activityContent">
             <span class="empty-mark">+</span>
             <strong id="activityTitle">Aún no hay actividad</strong>
             <p id="activityDescription">Tus entregas y revisiones aparecerán aquí.</p>

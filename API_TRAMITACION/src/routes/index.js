@@ -22,6 +22,7 @@ router.get('/', (req, res) => res.json({message: 'Probando... La prueba de API_T
 router.get('/createTable', index.createTable);
 router.post('/api/avances', upload.single('archivoPdf'), index.createAdvance);
 router.get('/api/avances', index.listAdvances);
+router.get('/api/actividad', index.listStudentActivity);
 router.get('/api/avances/:id/descargar', index.downloadAdvance);
 router.use('/api/revisiones', require('./revisionesRoutes'));
 router.use('/api/defensas', require('./defensasRoutes'));

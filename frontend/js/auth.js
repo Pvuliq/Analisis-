@@ -5,6 +5,7 @@ const appShell = document.querySelector('.app-shell');
 const loginForm = document.querySelector('#loginForm');
 const loginError = document.querySelector('#loginError');
 const userName = document.querySelector('#loggedUser');
+const studentRole = document.querySelector('#loggedStudentRole');
 const userRole = document.querySelector('#loggedRole');
 const logoutButton = document.querySelector('#logoutButton');
 
@@ -29,6 +30,7 @@ function showAuthenticated(user) {
   loginView.hidden = true;
   appShell.hidden = false;
   userName.textContent = user.name;
+  studentRole.textContent = user.rolUniversitario ? `ROL: ${user.rolUniversitario}` : '';
   userRole.textContent = user.role === 'profesor_guia' ? 'Profesor guía' : 'Memorista';
   logoutButton.hidden = false;
   document.dispatchEvent(new CustomEvent('auth:ready', { detail: user }));

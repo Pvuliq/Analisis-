@@ -76,6 +76,23 @@ body {
   font: 0.8rem Arial, sans-serif;
 }
 
+.user-identity {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+}
+
+.user-identity strong {
+  color: #f8f4e9;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.user-identity small {
+  color: #8fa4b2;
+  font-size: 0.65rem;
+}
+
 .user-session button {
   padding: 7px 10px;
   border: 1px solid #53636d;
@@ -1417,6 +1434,55 @@ textarea:focus {
   color: var(--muted);
   font-size: 0.85rem;
   line-height: 1.5;
+}
+
+.activity-list {
+  display: grid;
+  gap: 0;
+  margin-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.activity-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.activity-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--white);
+  background: var(--coral);
+  box-shadow: 3px 3px 0 rgba(46, 111, 186, 0.18);
+  font: 700 0.78rem Arial, sans-serif;
+}
+
+.activity-item strong {
+  display: block;
+  margin: 1px 0 5px;
+  color: var(--navy);
+  font: 700 0.82rem Arial, sans-serif;
+}
+
+.activity-item p,
+.activity-item small {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font: 0.76rem/1.45 Arial, sans-serif;
+}
+
+.activity-item small {
+  margin-top: 5px;
+  color: #8a9299;
+  font-size: 0.68rem;
 }
 
 .next-milestone {

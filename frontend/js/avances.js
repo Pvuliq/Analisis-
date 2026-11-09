@@ -1,4 +1,5 @@
 import { postFile } from './api.js';
+import { getCurrentUser } from './auth.js';
 
 export function renderStudentAdvances() {
   return `
@@ -66,7 +67,15 @@ export function bindAdvanceEvents(root = document) {
 
     const formData = new FormData();
     formData.append('archivoPdf', file);
-    formData.append('estudianteId', '202173001');
+    const user = getCurrentUser();
+    const estudianteId = user?.estudianteId || user?.rut;
+    if (!estudianteId) {
+      uploadAction.disabled = false;
+      uploadAction.textContent = 'No se encontró el RUT del estudiante';
+      return;
+    }
+    formData.append('estudianteId', estudianteId);
+    if (user.profesorGuiaId) formData.append('profesorGuiaId', user.profesorGuiaId);
     formData.append('esVersionFinal', String(root.querySelector('#finalVersion')?.checked ?? false));
 
     uploadAction.disabled = true;

@@ -62,7 +62,9 @@ const obtenerRevisiones = (req, res) => {
 
 const obtenerPendientes = (req, res) => {
     const query = `
-        SELECT a.avanceId, a.estudianteId, a.nombreArchivo, 
+        SELECT a.avanceId, a.estudianteId AS estudianteIdentificacion, a.estudianteId,
+               a.profesorGuiaId,
+               a.nombreArchivo,
                a.tamanoBytes, a.fechaEntrega, a.estado, a.esVersionFinal
         FROM avances a
         LEFT JOIN revisiones r ON a.avanceId = r.avanceId

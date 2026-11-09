@@ -133,6 +133,25 @@ Además, pueden poner en su navegador ```localhost:8080``` y/o ```localhost:8081
 
 ### Enjoy!
 
+### Levantar toda la aplicación con Docker Compose
+
+Desde la raíz del proyecto, ejecuta:
+
+```bash
+docker compose up --build
+```
+
+Esto inicia MySQL, las APIs de Tramitación y Validaciones, la API de ejemplo y el frontend. La página queda disponible en [http://localhost:5504](http://localhost:5504).
+
+MySQL queda disponible para DBeaver en `localhost:3307` (usuario `root`, contraseña `password`). Dentro de Docker, las APIs siguen usando `db:3306`.
+
+La inicialización de las bases de datos se ejecuta automáticamente solo cuando se crea el volumen MySQL por primera vez. Para reinicializar las tablas y usuarios de desarrollo:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 Pasos seguidos para el levantamiento:
 
 Capturas de pantalla:

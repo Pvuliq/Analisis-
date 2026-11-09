@@ -1,6 +1,24 @@
 import { post, get } from './api.js';
+import { getCurrentUser } from './auth.js';
 
-const DEMO_STUDENT_ID = '202173001';
+const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+
+function updateSelectedAdvance(root, option) {
+  if (!option || !option.value) return;
+  const link = root.querySelector('#selectedAdvanceLink');
+  const name = root.querySelector('#selectedAdvanceName');
+  const meta = root.querySelector('#selectedAdvanceMeta');
+  const downloadButton = root.querySelector('#downloadAdvanceButton');
+  const studentId = option.dataset.studentId;
+  if (link) link.href = `${API_BASE_URL}/api/avances/${encodeURIComponent(option.value)}/descargar`;
+  if (name) name.textContent = option.dataset.fileName || 'Avance seleccionado';
+  if (meta) meta.textContent = `Estudiante: ${studentId} · Abrir PDF`;
+  if (downloadButton) downloadButton.textContent = 'Abrir PDF';
+  root.dispatchEvent(new CustomEvent('advance:selected', {
+    bubbles: true,
+    detail: { avanceId: Number(option.value), estudianteId: studentId }
+  }));
+}
 
 function renderAdvanceSelector() {
   return `
@@ -18,7 +36,12 @@ export function renderReviews(isGuide) {
       <div class="scenario-grid">
         <section class="interaction-panel review-panel">
           <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
-          <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span></div>
+          <a class="review-document" id="selectedAdvanceLink" href="#" target="_blank" rel="noopener">
+            <span class="file-icon">PDF</span>
+            <div><strong id="selectedAdvanceName">Selecciona una entrega</strong><small id="selectedAdvanceMeta">Abrir PDF seleccionado</small></div>
+            <span class="review-status" id="reviewTag">Pendiente</span>
+            <span class="action-button" id="downloadAdvanceButton">Abrir PDF</span>
+          </a>
           ${renderAdvanceSelector()}
           <label class="field-label" for="reviewNotes">Observaciones para el memorista</label>
           <textarea id="reviewNotes" rows="4" placeholder="Escribe las correcciones y comentarios de esta versión..."></textarea>
@@ -39,7 +62,7 @@ export function renderReviews(isGuide) {
   }
 
   return `
-    <div class="scenario-grid" data-review-student-id="${DEMO_STUDENT_ID}">
+    <div class="scenario-grid" data-review-mode="student" data-review-student-id="">
       <section class="interaction-panel">
         <div class="panel-topline"><span class="story-symbol">03</span><span>Mis revisiones</span></div>
         <h4>Observaciones del Profesor Guía</h4>
@@ -108,10 +131,14 @@ export function bindReviewEvents(root = document) {
   const reviewAdvance = root.querySelector('#reviewAdvance');
   const reviewAdvanceStatus = root.querySelector('#reviewAdvanceStatus');
   const reviewStudentId = root.querySelector('[data-review-student-id]')?.dataset.reviewStudentId
-    || DEMO_STUDENT_ID;
+    || getCurrentUser()?.estudianteId
+    || getCurrentUser()?.rut;
 
   if (reviewAdvance) {
-    get(`/api/avances?estudianteId=${encodeURIComponent(reviewStudentId)}`)
+    const advancesRequest = root.querySelector('[data-review-mode="guide"]')
+      ? get('/api/revisiones/pendientes')
+      : get(`/api/avances?estudianteId=${encodeURIComponent(reviewStudentId)}`);
+    advancesRequest
       .then((advances) => {
         if (!Array.isArray(advances)) {
           throw new Error('El servidor devolvió una lista de avances inválida.');
@@ -126,12 +153,18 @@ export function bindReviewEvents(root = document) {
         reviewAdvance.replaceChildren(...advances.map((advance) => {
           const option = document.createElement('option');
           option.value = advance.avanceId;
-          option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+          option.dataset.studentId = advance.estudianteId;
+          option.dataset.fileName = advance.nombreArchivo;
+          const student = advance.estudianteIdentificacion
+            ? ` · Estudiante: ${advance.estudianteIdentificacion}`
+            : '';
+          option.textContent = `${advance.nombreArchivo}${student}${advance.esVersionFinal ? ' · Versión final' : ''}`;
           return option;
         }));
         if (reviewAdvanceStatus) {
           reviewAdvanceStatus.textContent = 'La revisión quedará asociada a la versión seleccionada.';
         }
+        updateSelectedAdvance(root, reviewAdvance.options[0]);
       })
       .catch((error) => {
         reviewAdvance.innerHTML = '<option value="">No se pudieron cargar los avances</option>';
@@ -140,6 +173,10 @@ export function bindReviewEvents(root = document) {
         }
       });
   }
+
+  reviewAdvance?.addEventListener('change', () => {
+    updateSelectedAdvance(root, reviewAdvance.options[reviewAdvance.selectedIndex]);
+  });
 
   if (studentFeedbackArea) {
     get('/api/revisiones')

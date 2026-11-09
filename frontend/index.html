@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="styles.css?v=integrated-flow-v4-20261015">
 </head>
 <body>
+  <section id="loginView" class="login-view" hidden>
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">Plataforma de titulacion</p>
+      <h1>Iniciar sesión</h1>
+      <p>Ingresa con tu usuario para acceder a tu espacio de memoria.</p>
+      <label>Usuario<input name="nombreUsuario" type="text" autocomplete="username" required></label>
+      <label>Contraseña<input name="contrasena" type="password" autocomplete="current-password" required></label>
+      <p id="loginError" class="login-error" role="alert"></p>
+      <button class="primary-button" type="submit">Ingresar</button>
+    </form>
+  </section>
   <main class="app-shell">
     <header class="site-header">
       <div class="brand-lockup">
@@ -22,13 +33,14 @@
         <button class="nav-item" type="button" data-section="revisiones">Revisiones</button>
         <button class="nav-item" type="button" data-section="defensa">Defensa</button>
       </nav>
-      <label class="role-picker">
-        <span>Vista actual</span>
-        <select id="roleSelect">
-          <option value="student">Memorista</option>
-          <option value="guide">Profesor guia</option>
-        </select>
-      </label>
+      <div class="role-display">
+        <span>Perfil</span>
+        <strong id="loggedRole"></strong>
+      </div>
+      <div class="user-session">
+        <span id="loggedUser"></span>
+        <button id="logoutButton" type="button" hidden>Cerrar sesión</button>
+      </div>
     </header>
 
     <section class="workspace">
@@ -85,6 +97,7 @@
       <div id="featureView" class="feature-view" hidden></div>
     </section>
   </main>
-  <script type="module" src="js/main.js?v=navbar-views-fix-20261029"></script>
+  <script type="module" src="js/auth.js?v=auth-role-v2"></script>
+  <script type="module" src="js/main.js?v=auth-role-v2"></script>
 </body>
 </html>

@@ -2,8 +2,8 @@ import { bindAdvanceEvents, renderGuideAdvances, renderStudentAdvances } from '.
 import { bindReviewEvents, renderReviews } from './revisiones.js';
 import { bindDefenseEvents, renderDefense, renderGuideReviewAndDefense } from './defensa.js';
 import { get } from './api.js';
+import { getCurrentUser, roleToView } from './auth.js';
 
-const roleSelect = document.querySelector('#roleSelect');
 const navigationItems = document.querySelectorAll('.nav-item');
 const homeLayout = document.querySelector('.home-layout');
 const featureView = document.querySelector('#featureView');
@@ -26,6 +26,7 @@ const nextDescription = document.querySelector('#nextDescription');
 const primaryButton = document.querySelector('#primaryButton');
 
 let currentSection = 'inicio';
+let activeRole = 'student';
 
 const roleProfiles = {
   student: {
@@ -91,7 +92,7 @@ function updateHomeRole(role) {
   quickTitle.textContent = profile.quickTitle;
   quickCount.textContent = profile.quickCount;
   quickContent.innerHTML = role === 'guide'
-    ? renderGuideQuickLinks(profile.areaDescriptions)
+    ? renderGuideQuickLinks()
     : renderStudentDeliverySummary();
   if (role === 'student') loadStudentDeliveries();
   activityLabel.textContent = profile.activityLabel;
@@ -103,11 +104,11 @@ function updateHomeRole(role) {
   nextDescription.textContent = profile.nextDescription;
   primaryButton.textContent = profile.primary;
   primaryButton.dataset.section = role === 'guide' ? 'revisiones' : 'avances';
-  roleSelect.setAttribute('aria-label', `Vista actual: ${role === 'guide' ? 'Profesor Guía' : 'Memorista'}`);
 }
 
 function setActiveNavigation(section) {
   navigationItems.forEach((item) => {
+    item.hidden = activeRole === 'guide' && item.dataset.section === 'avances';
     item.classList.toggle('is-active', item.dataset.section === section);
   });
 }
@@ -133,12 +134,7 @@ function bindFeatureEvents() {
 
 function renderFeature(section) {
   currentSection = section;
-  const isGuide = roleSelect.value === 'guide';
-
-  if (isGuide && section === 'defensa') {
-    section = 'revisiones';
-    currentSection = section;
-  }
+  const isGuide = activeRole === 'guide';
 
   const features = {
     avances: {
@@ -152,9 +148,11 @@ function renderFeature(section) {
       body: isGuide ? renderGuideReviewAndDefense() : renderReviews(false)
     },
     defensa: {
-      title: 'Estado de mi defensa',
-      description: 'Consulta los requisitos y el estado de autorización de tu defensa.',
-      body: renderDefense(false)
+      title: isGuide ? 'Defensa y revisiones' : 'Estado de mi defensa',
+      description: isGuide
+        ? 'Revisa entregas y consulta los requisitos de defensa de cada memorista.'
+        : 'Consulta los requisitos y el estado de autorización de tu defensa.',
+      body: isGuide ? renderGuideReviewAndDefense() : renderDefense(false)
     }
   };
   const feature = features[section];
@@ -199,8 +197,11 @@ function renderStudentDeliverySummary(deliveries = []) {
 
 async function loadStudentDeliveries() {
   try {
-    const deliveries = await get('/api/avances?estudianteId=202173001');
-    if (roleSelect.value === 'student' && currentSection === 'inicio') {
+    const user = getCurrentUser();
+    const estudianteId = user?.estudianteId || user?.rut;
+    if (!estudianteId) return;
+    const deliveries = await get(`/api/avances?estudianteId=${encodeURIComponent(estudianteId)}`);
+    if (activeRole === 'student' && currentSection === 'inicio') {
       quickContent.innerHTML = renderStudentDeliverySummary(deliveries);
     }
   } catch (error) {
@@ -216,9 +217,13 @@ function formatBytes(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function renderGuideQuickLinks(areaDescriptions) {
-  return areaDescriptions.map(([title, description], index) => `
-    <button class="area-link" type="button" data-section="${['avances', 'revisiones', 'defensa'][index]}">
+function renderGuideQuickLinks() {
+  const links = [
+    ['Revisiones', 'Evalúa las entregas pendientes de tus memoristas', 'revisiones'],
+    ['Defensas', 'Consulta y autoriza defensas preparadas', 'defensa']
+  ];
+  return links.map(([title, description, section], index) => `
+    <button class="area-link" type="button" data-section="${section}">
       <span class="area-number">0${index + 1}</span>
       <span><strong>${title}</strong><small>${description}</small></span>
       <span class="area-arrow">→</span>
@@ -231,7 +236,7 @@ function showHome() {
   featureView.hidden = true;
   homeLayout.hidden = false;
   workspace.classList.remove('feature-active');
-  const profile = roleProfiles[roleSelect.value];
+  const profile = roleProfiles[activeRole];
   workspaceTitle.textContent = profile.workspaceTitle;
   workspaceNote.textContent = profile.workspaceNote;
   setActiveNavigation('inicio');
@@ -242,16 +247,21 @@ document.addEventListener('click', (event) => {
   if (!target) return;
 
   const section = target.dataset.section;
+  if (activeRole === 'guide' && section === 'avances') return;
   if (section === 'inicio') showHome();
   else renderFeature(section);
 });
 
-roleSelect.addEventListener('change', (event) => {
-  updateHomeRole(event.target.value);
-  if (currentSection === 'inicio') showHome();
-  else renderFeature(currentSection);
-});
-
 window.addEventListener('advance:created', loadStudentDeliveries);
 
-updateHomeRole('student');
+const currentUser = getCurrentUser();
+if (currentUser) {
+  activeRole = roleToView(currentUser.role);
+  updateHomeRole(activeRole);
+}
+
+document.addEventListener('auth:ready', (event) => {
+  activeRole = roleToView(event.detail.role);
+  updateHomeRole(activeRole);
+  showHome();
+});

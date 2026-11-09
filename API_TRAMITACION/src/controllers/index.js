@@ -23,15 +23,16 @@ const createAdvance = (req, res) => {
         return res.status(400).json({ message: 'archivoPdf y estudianteId son obligatorios.' });
     }
 
-    const estudianteId = Number(req.body.estudianteId);
-    if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
-        return res.status(400).json({ message: 'estudianteId debe ser un entero positivo.' });
+    const estudianteId = String(req.body.estudianteId).trim();
+    if (!/^\d{8,9}-[\dKk]$/.test(estudianteId)) {
+        return res.status(400).json({ message: 'estudianteId debe tener formato RUT, por ejemplo 202473021-5.' });
     }
 
     const createAdvanceTable = `
         CREATE TABLE IF NOT EXISTS avances (
             avanceId INT AUTO_INCREMENT PRIMARY KEY,
-            estudianteId INT NOT NULL,
+            estudianteId VARCHAR(20) NOT NULL,
+            profesorGuiaId VARCHAR(20) NULL,
             nombreArchivo VARCHAR(255) NOT NULL,
             archivoPdf LONGBLOB NOT NULL,
             tamanoBytes INT NOT NULL,
@@ -48,13 +49,15 @@ const createAdvance = (req, res) => {
 
         const fechaEntrega = new Date();
         const esVersionFinal = req.body.esVersionFinal === 'true';
+        const profesorGuiaId = String(req.body.profesorGuiaId || '').trim() || null;
         const insertAdvance = `
             INSERT INTO avances
-                (estudianteId, nombreArchivo, archivoPdf, tamanoBytes, fechaEntrega, estado, esVersionFinal)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (estudianteId, profesorGuiaId, nombreArchivo, archivoPdf, tamanoBytes, fechaEntrega, estado, esVersionFinal)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const values = [
             estudianteId,
+            profesorGuiaId,
             req.file.originalname,
             req.file.buffer,
             req.file.size,
@@ -124,14 +127,13 @@ const createAdvance = (req, res) => {
 };
 
 const listAdvances = (req, res) => {
-    const estudianteId = Number(req.query.estudianteId);
-
-    if (!Number.isInteger(estudianteId) || estudianteId <= 0) {
-        return res.status(400).json({ message: 'estudianteId debe ser un entero positivo.' });
+    const estudianteId = String(req.query.estudianteId || '').trim();
+    if (!/^\d{8,9}-[\dKk]$/.test(estudianteId)) {
+        return res.status(400).json({ message: 'estudianteId debe tener formato RUT, por ejemplo 202473021-5.' });
     }
 
     const query = `
-        SELECT avanceId, estudianteId, nombreArchivo, tamanoBytes,
+        SELECT avanceId, estudianteId, profesorGuiaId, nombreArchivo, tamanoBytes,
                fechaEntrega, estado, esVersionFinal
         FROM avances
         WHERE estudianteId = ?
@@ -147,8 +149,35 @@ const listAdvances = (req, res) => {
     });
 };
 
+const downloadAdvance = (req, res) => {
+    const avanceId = Number(req.params.id);
+    if (!Number.isInteger(avanceId) || avanceId <= 0) {
+        return res.status(400).json({ message: 'El identificador del avance no es válido.' });
+    }
+
+    database.query(
+        'SELECT nombreArchivo, archivoPdf FROM avances WHERE avanceId = ? LIMIT 1',
+        [avanceId],
+        (error, rows) => {
+            if (error) {
+                console.error('No se pudo consultar el PDF del avance:', error);
+                return res.status(500).json({ message: 'No se pudo descargar el avance.' });
+            }
+            if (rows.length === 0) {
+                return res.status(404).json({ message: 'No existe el avance solicitado.' });
+            }
+
+            const fileName = rows[0].nombreArchivo.replace(/["\r\n]/g, '_');
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+            return res.send(rows[0].archivoPdf);
+        }
+    );
+};
+
 module.exports = {
     createTable,
     createAdvance,
-    listAdvances
+    listAdvances,
+    downloadAdvance
 };

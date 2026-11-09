@@ -1,7 +1,12 @@
 import { get, post } from './api.js';
+import { getCurrentUser } from './auth.js';
 
-const DEMO_STUDENT_ID = '202173001';
 const DEFENSE_API_PATH = '/api/defensas';
+
+function activeStudentId() {
+  const user = getCurrentUser();
+  return user?.estudianteId || user?.rut || '';
+}
 
 function renderApprovalPanel(compact = false) {
   const panelClass = compact ? 'compact-approval-panel' : 'approval-panel';
@@ -31,7 +36,7 @@ function renderApprovalPanel(compact = false) {
 
 export function renderGuideReviewAndDefense() {
   return `
-    <div class="combined-review-layout" data-defense-student-id="${DEMO_STUDENT_ID}" data-review-student-id="${DEMO_STUDENT_ID}">
+    <div class="combined-review-layout" data-defense-student-id="" data-review-mode="guide" data-review-student-id="">
       <section class="interaction-panel review-panel">
         <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
         <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span></div>
@@ -54,7 +59,7 @@ export function renderGuideReviewAndDefense() {
 export function renderDefense(isGuide) {
   if (isGuide) {
     return `
-      <div class="scenario-grid" data-defense-student-id="${DEMO_STUDENT_ID}">
+      <div class="scenario-grid" data-defense-student-id="">
         ${renderApprovalPanel()}
         <aside class="evidence-panel">
           <p class="section-label">Estado de la memoria</p>
@@ -67,7 +72,7 @@ export function renderDefense(isGuide) {
   }
 
   return `
-    <div class="scenario-grid" data-defense-student-id="${DEMO_STUDENT_ID}">
+    <div class="scenario-grid" data-defense-student-id="">
       <section class="interaction-panel">
         <div class="panel-topline"><span class="story-symbol">03</span><span>Mi defensa</span></div>
         <h4>Estado de autorización</h4>
@@ -148,8 +153,11 @@ function displayDefenseState(root, state) {
 }
 
 function getStudentId(root) {
-  const id = root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId;
-  if (!id || !/^\d+$/.test(id) || Number(id) <= 0) {
+  const selectedOption = root.querySelector('#reviewAdvance option:checked');
+  const id = selectedOption?.dataset.studentId
+    || root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId
+    || activeStudentId();
+  if (!/^\d{8,9}-[\dKk]$/.test(id)) {
     throw new Error('No se pudo determinar la memoria que se está autorizando.');
   }
 
@@ -205,6 +213,11 @@ export function bindDefenseEvents(root = document) {
     }
     return;
   }
+
+  root.addEventListener('advance:selected', (event) => {
+    if (!event.detail?.estudianteId) return;
+    loadDefenseState(root, event.detail.estudianteId);
+  });
 
   loadDefenseState(root, studentId);
 

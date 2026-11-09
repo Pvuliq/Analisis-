@@ -39,11 +39,15 @@ const ensureColumn = async (table, column, definition) => {
     }
 };
 
+const ensureStudentIdentifierType = async (table) => {
+    await query(`ALTER TABLE \`${table}\` MODIFY COLUMN estudianteId VARCHAR(20) NOT NULL`);
+};
+
 const initializeSchema = async () => {
     await query(`
         CREATE TABLE IF NOT EXISTS avances (
             avanceId INT AUTO_INCREMENT PRIMARY KEY,
-            estudianteId INT NOT NULL,
+            estudianteId VARCHAR(20) NOT NULL,
             nombreArchivo VARCHAR(255) NOT NULL,
             archivoPdf LONGBLOB NOT NULL,
             tamanoBytes INT NOT NULL,
@@ -53,6 +57,8 @@ const initializeSchema = async () => {
         )
     `);
     await ensureColumn('avances', 'esVersionFinal', 'TINYINT(1) NOT NULL DEFAULT 0');
+    await ensureColumn('avances', 'profesorGuiaId', 'VARCHAR(20) NULL');
+    await ensureStudentIdentifierType('avances');
 
     await query(`
         CREATE TABLE IF NOT EXISTS revisiones (
@@ -70,7 +76,7 @@ const initializeSchema = async () => {
     await query(`
         CREATE TABLE IF NOT EXISTS autorizaciones_defensa (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            estudianteId INT NOT NULL,
+            estudianteId VARCHAR(20) NOT NULL,
             avanceId INT NOT NULL,
             revisionId INT NOT NULL,
             estado VARCHAR(50) NOT NULL,
@@ -78,6 +84,7 @@ const initializeSchema = async () => {
             UNIQUE KEY uq_autorizacion_estudiante (estudianteId)
         )
     `);
+    await ensureStudentIdentifierType('autorizaciones_defensa');
 
     await query(`
         CREATE TABLE IF NOT EXISTS notificaciones_defensa (
@@ -93,8 +100,8 @@ const initializeSchema = async () => {
 };
 
 const getStudentId = (value) => {
-    const estudianteId = Number(value);
-    return Number.isInteger(estudianteId) && estudianteId > 0 ? estudianteId : null;
+    const estudianteId = String(value || '').trim();
+    return /^\d{8,9}-[\dKk]$/.test(estudianteId) ? estudianteId : null;
 };
 
 const getDefenseSnapshot = async (estudianteId, executor = database) => {

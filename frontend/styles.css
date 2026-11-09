@@ -16,11 +16,87 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   color: var(--ink);
   background: #dde6ed;
   font-family: Georgia, 'Times New Roman', serif;
+}
+
+.login-view {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+}
+
+.login-card {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 40px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.login-card h1 {
+  margin-bottom: 0;
+}
+
+.login-card label {
+  display: grid;
+  gap: 7px;
+  font: 700 0.85rem Arial, sans-serif;
+}
+
+.login-card input {
+  padding: 12px;
+  border: 1px solid var(--line);
+  font: 1rem Arial, sans-serif;
+}
+
+.login-error {
+  min-height: 1.2em;
+  margin: 0;
+  color: #a33232;
+  font: 0.85rem Arial, sans-serif;
+}
+
+.user-session {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 10px;
+  color: #b8c6c8;
+  font: 0.8rem Arial, sans-serif;
+}
+
+.user-session button {
+  padding: 7px 10px;
+  border: 1px solid #53636d;
+  color: #f8f4e9;
+  background: transparent;
+}
+
+.role-display {
+  display: grid;
+  gap: 5px;
+  color: #b8c6c8;
+  font: 0.72rem Arial, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.role-display strong {
+  color: #f8f4e9;
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 button,
@@ -42,7 +118,7 @@ button {
 
 .site-header {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto minmax(180px, 1fr);
+  grid-template-columns: minmax(220px, 1fr) auto auto auto;
   align-items: center;
   gap: 32px;
   padding: 18px clamp(24px, 5vw, 88px);
@@ -124,17 +200,6 @@ h1 {
   transform: translateX(5px);
 }
 
-.site-header .role-picker {
-  justify-self: end;
-  color: #b8c6c8;
-}
-
-.site-header .role-picker select {
-  border-color: #53636d;
-  color: #f8f4e9;
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .workspace {
   min-width: 0;
   padding: 48px clamp(24px, 5vw, 88px) 64px;
@@ -173,25 +238,6 @@ h1 {
   font-size: clamp(2.4rem, 4vw, 4.4rem);
   font-weight: 400;
   line-height: 0.95;
-}
-
-.role-picker {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font: 700 0.7rem Arial, sans-serif;
-  text-transform: uppercase;
-}
-
-.role-picker select {
-  min-width: 160px;
-  padding: 10px 12px;
-  border: 1px solid #b8c9c4;
-  border-radius: 2px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.7);
-  font-size: 0.85rem;
-  text-transform: none;
 }
 
 .dashboard-grid {
@@ -1413,8 +1459,8 @@ textarea:focus {
     margin-top: 24px;
   }
 
-  .site-header .role-picker {
-    justify-self: auto;
+  .role-display,
+  .user-session {
     margin-top: 22px;
   }
 

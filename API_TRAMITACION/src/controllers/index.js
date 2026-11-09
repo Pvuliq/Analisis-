@@ -183,6 +183,31 @@ const listStudentActivity = (req, res) => {
     });
 };
 
+const listGuideActivity = (req, res) => {
+    const profesorGuiaId = String(req.query.profesorGuiaId || '').trim();
+    if (!/^\d{8,9}-[\dKk]$/.test(profesorGuiaId)) {
+        return res.status(400).json({ message: 'profesorGuiaId debe tener formato ROL, por ejemplo 202473009-6.' });
+    }
+
+    const query = `
+        SELECT 'entrega' AS tipo, a.avanceId AS referenciaId, a.fechaEntrega AS fecha,
+               a.nombreArchivo, a.estudianteId, a.estado, a.esVersionFinal
+        FROM avances a
+        WHERE a.profesorGuiaId = ?
+        ORDER BY a.fechaEntrega DESC
+        LIMIT 20
+    `;
+
+    database.query(query, [profesorGuiaId], (error, rows) => {
+        if (error) {
+            console.error('No se pudo consultar la actividad del profesor:', error);
+            return res.status(500).json({ message: 'No se pudo consultar la actividad del profesor.' });
+        }
+
+        return res.json(rows);
+    });
+};
+
 const downloadAdvance = (req, res) => {
     const avanceId = Number(req.params.id);
     if (!Number.isInteger(avanceId) || avanceId <= 0) {
@@ -214,5 +239,6 @@ module.exports = {
     createAdvance,
     listAdvances,
     listStudentActivity,
+    listGuideActivity,
     downloadAdvance
 };

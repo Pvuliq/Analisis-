@@ -97,6 +97,8 @@ function updateHomeRole(role) {
   if (role === 'student') {
     loadStudentDeliveries();
     loadStudentActivity();
+  } else {
+    loadGuideActivity();
   }
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
@@ -275,6 +277,48 @@ async function loadStudentActivity() {
     }
   } catch (error) {
     console.error('No se pudo cargar la actividad del estudiante:', error);
+  }
+}
+
+function renderGuideActivity(activity = []) {
+  if (activity.length === 0) {
+    activityMeta.textContent = 'Últimos movimientos';
+    return `
+      <span class="empty-mark">+</span>
+      <strong>Aún no hay actividad</strong>
+      <p>Las entregas de tus memoristas aparecerán aquí.</p>
+    `;
+  }
+
+  activityMeta.textContent = `${activity.length} ${activity.length === 1 ? 'entrega' : 'entregas'}`;
+  return `
+    <div class="activity-list">
+      ${activity.map((item) => `
+        <article class="activity-item">
+          <span class="activity-icon">↑</span>
+          <div>
+            <strong>Nuevo avance recibido</strong>
+            <p>${escapeHtml(`El estudiante ${item.estudianteId} entregó ${item.nombreArchivo}.`)}</p>
+            <small>${escapeHtml(formatActivityDate(item.fecha))}</small>
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function loadGuideActivity() {
+  try {
+    const user = getCurrentUser();
+    const profesorGuiaId = user?.rolUniversitario;
+    if (!profesorGuiaId || activeRole !== 'guide') return;
+
+    const activity = await get(`/api/actividad/profesor?profesorGuiaId=${encodeURIComponent(profesorGuiaId)}`);
+    if (activeRole === 'guide' && currentSection === 'inicio') {
+      document.querySelector('#activityContent').innerHTML = renderGuideActivity(activity);
+    }
+  } catch (error) {
+    console.error('No se pudo cargar la actividad del profesor:', error);
   }
 }
 

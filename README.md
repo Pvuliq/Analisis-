@@ -15,9 +15,9 @@ Documentación del proyecto en la Wiki en el siguiente [enlace](https://gitlab.i
 
 ## Aspectos técnicos relevantes
 
-_Todo aspecto relevante para poder usar el proyecto o consideraciones del proyecto base a ser entregado_
-
-_Nada por el momento..._
+- Se utilizó DBeaver para administrar y verificar las bases de datos MySQL.
+- Es muy importante haber completado el levantamiento de los contenedores Docker y verificar que las API estén en ejecución antes de interactuar con el frontend.
+- Las instrucciones detalladas para servir y visualizar la página web se encuentran en la sección final de este README.
 
 ## Requerimientos
 
@@ -132,3 +132,63 @@ Además, pueden poner en su navegador ```localhost:8080``` y/o ```localhost:8081
 ![Ejemplo3](img/navegador.png)
 
 ### Enjoy!
+
+### Levantar toda la aplicación con Docker Compose
+
+Desde la raíz del proyecto, ejecuta:
+
+```bash
+docker compose up --build
+```
+
+Esto inicia MySQL, las APIs de Tramitación y Validaciones, la API de ejemplo y el frontend. La página queda disponible en [http://localhost:5504](http://localhost:5504).
+
+MySQL queda disponible para DBeaver en `localhost:3307` (usuario `root`, contraseña `password`). Dentro de Docker, las APIs siguen usando `db:3306`.
+
+La inicialización de las bases de datos se ejecuta automáticamente solo cuando se crea el volumen MySQL por primera vez. Para reinicializar las tablas y usuarios de desarrollo:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Pasos seguidos para el levantamiento:
+
+Capturas de pantalla:
+
+* Ejecutar "docker compose up --build -d" en "API_TRAMITACION":
+![Consola1](img/docker_compose_tramitacion.png)
+
+* Ejecutar "docker compose up --build -d" en "API_VALIDACIONES":
+![Consola2](img/docker_compose_validaciones.png)
+
+* Docker Desktop con todos los contenedores iniciados en su totalidad:
+![Docker1](img/docker_desktop_levantado.png)
+
+## Prototipo
+* [Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)
+
+## Pasos extras a seguir luego del levantamiento para revisar la página web
+
+- Muy importante: revisar que todas las APIs o contenedores de Docker estén corriendo y que estén creadas las bases de datos pedidas al inicio.
+
+### 1. Iniciar el servidor local del Frontend
+
+Desde la terminal, sitúate en la carpeta raíz del proyecto y ejecuta:
+
+```bash
+python3 -m http.server 5504 --directory frontend
+```
+
+o bien:
+
+```bash
+cd frontend
+python -m http.server 5504
+```
+
+- El número de puerto se puede cambiar en caso de que esté ocupado.
+
+### 2. Abrir en el navegador
+
+http://localhost:5504

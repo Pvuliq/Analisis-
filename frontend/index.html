@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="styles.css?v=integrated-flow-v4-20261015">
 </head>
 <body>
+  <section id="loginView" class="login-view" hidden>
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">Plataforma de titulacion</p>
+      <h1>Iniciar sesión</h1>
+      <p>Ingresa con tu usuario para acceder a tu espacio de memoria.</p>
+      <label>Usuario<input name="nombreUsuario" type="text" autocomplete="username" required></label>
+      <label>Contraseña<input name="contrasena" type="password" autocomplete="current-password" required></label>
+      <p id="loginError" class="login-error" role="alert"></p>
+      <button class="primary-button" type="submit">Ingresar</button>
+    </form>
+  </section>
   <main class="app-shell">
     <header class="site-header">
       <div class="brand-lockup">
@@ -22,13 +33,17 @@
         <button class="nav-item" type="button" data-section="revisiones">Revisiones</button>
         <button class="nav-item" type="button" data-section="defensa">Defensa</button>
       </nav>
-      <label class="role-picker">
-        <span>Vista actual</span>
-        <select id="roleSelect">
-          <option value="student">Memorista</option>
-          <option value="guide">Profesor guia</option>
-        </select>
-      </label>
+      <div class="role-display">
+        <span>Perfil</span>
+        <strong id="loggedRole"></strong>
+      </div>
+      <div class="user-session">
+        <span class="user-identity">
+          <strong id="loggedUser"></strong>
+          <small id="loggedStudentRole"></small>
+        </span>
+        <button id="logoutButton" type="button" hidden>Cerrar sesión</button>
+      </div>
     </header>
 
     <section class="workspace">
@@ -50,43 +65,15 @@
           <span class="status-badge" id="statusBadge">En desarrollo</span>
         </section>
 
-        <section class="progress-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="section-label" id="progressLabel">Estado actual</p>
-              <h3 id="progressTitle">Documento en desarrollo</h3>
-            </div>
-            <strong id="progressValue">02<span>/04</span></strong>
-          </div>
-          <div class="progress-track"><span id="progressFill"></span></div>
-          <div class="progress-labels"><span id="progressStart">Inicio</span><span id="progressMiddle">Revisión</span><span id="progressEnd">Defensa</span></div>
-        </section>
-
         <section class="quick-access" aria-label="Accesos principales">
           <div class="section-heading">
             <div>
-              <p class="section-label">Accesos rápidos</p>
-              <h3 id="quickTitle">Continúa tu trabajo</h3>
+              <p class="section-label">Resumen de entregas</p>
+              <h3 id="quickTitle">Entregas recientes</h3>
             </div>
-            <span id="quickCount">3 áreas disponibles</span>
+            <span id="quickCount">Sin entregas</span>
           </div>
-          <div class="area-list">
-            <button class="area-link" type="button" data-section="avances">
-              <span class="area-number">01</span>
-              <span><strong id="areaOneTitle">Mis avances</strong><small id="areaOneDescription">Entrega y seguimiento de documentos</small></span>
-              <span class="area-arrow">→</span>
-            </button>
-            <button class="area-link" type="button" data-section="revisiones">
-              <span class="area-number">02</span>
-              <span><strong id="areaTwoTitle">Revisiones</strong><small id="areaTwoDescription">Observaciones y correcciones del profesor</small></span>
-              <span class="area-arrow">→</span>
-            </button>
-            <button class="area-link" type="button" data-section="defensa">
-              <span class="area-number">03</span>
-              <span><strong id="areaThreeTitle">Defensa</strong><small id="areaThreeDescription">Estado y próximos pasos del proceso final</small></span>
-              <span class="area-arrow">→</span>
-            </button>
-          </div>
+          <div class="area-list" id="quickContent"></div>
         </section>
 
         <aside class="activity-panel">
@@ -94,7 +81,7 @@
             <p class="section-label" id="activityLabel">Actividad reciente</p>
             <span id="activityMeta">Últimos movimientos</span>
           </div>
-          <div class="empty-activity">
+          <div class="empty-activity" id="activityContent">
             <span class="empty-mark">+</span>
             <strong id="activityTitle">Aún no hay actividad</strong>
             <p id="activityDescription">Tus entregas y revisiones aparecerán aquí.</p>
@@ -107,12 +94,13 @@
             <h3 id="nextTitle">Registrar una nueva entrega</h3>
             <p id="nextDescription">Cuando tengas una nueva versión de tu documento, podrás cargarla para iniciar la revisión.</p>
           </div>
-          <button class="primary-button" id="primaryButton" type="button" data-section="avances">Ir a mis avances</button>
+          <button class="primary-button" id="primaryButton" type="button" data-section="avances">Subir nuevo avance</button>
         </section>
       </div>
       <div id="featureView" class="feature-view" hidden></div>
     </section>
   </main>
-  <script src="app.js?v=integrated-flow-layout-20261015"></script>
+  <script type="module" src="js/auth.js?v=auth-role-v2"></script>
+  <script type="module" src="js/main.js?v=auth-role-v2"></script>
 </body>
 </html>

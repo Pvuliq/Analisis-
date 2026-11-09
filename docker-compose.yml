@@ -1,24 +1,84 @@
-version: "3.4"
-
 services:
-  mysql:
-    image: mysql
-    ports: 
-      - "3306:3306"
+  db:
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3307:3306"
     volumes:
-      - ./API_EJEMPLO/init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
-# Contenedor para la API de ejemplo
-  api_ejemplo:
-    build: ./API_EJEMPLO
-    image: api_ejemplo
-    volumes:
-      - ./API_EJEMPLO/:/usr/app
-      - /usr/app/node_modules
+  api_tramitacion:
+    build:
+      context: ./API_TRAMITACION
+    ports:
+      - "8080:8080"
+    environment:
+      PORT_API: 8080
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: BD02_TRAMITACION
+      DB_PORT: 3306
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
     restart: on-failure
+
+  api_validaciones:
+    build:
+      context: ./API_VALIDACIONES
+    ports:
+      - "8081:8081"
+    environment:
+      PORT_API: 8081
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: BD02_VALIDACIONES
+      DB_PORT: 3306
+      DB_HOST: db
+      JWT_SECRET: desarrollo-cambiar-esta-clave
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api_ejemplo:
+    build:
+      context: ./API_EJEMPLO
     ports:
       - "8082:8082"
+    environment:
+      PORT_API: 8082
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: BD_EJEMPLO
+      DB_PORT: 3306
+      DB_HOST: db
     depends_on:
-      - mysql
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5504:80"
+    depends_on:
+      - api_tramitacion
+      - api_validaciones
+
+volumes:
+  mysql_data:

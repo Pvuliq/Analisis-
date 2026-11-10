@@ -42,11 +42,21 @@ const guardarRevision = (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'No existe el avance que se intenta revisar' });
         }
-        res.status(201).json({
-            message: 'Revisión guardada',
-            id: result.insertId,
-            avanceId,
-            resultado
+
+        const updateQuery = `UPDATE avances SET estado = 'Revisado' WHERE avanceId = ?`;
+        
+        database.query(updateQuery, [avanceId], (updateErr) => {
+            if (updateErr) {
+                console.error('Error al actualizar el estado del avance:', updateErr);
+                return res.status(500).json({ message: 'Revisión guardada, pero falló la actualización del estado.' });
+            }
+            
+            res.status(201).json({
+                message: 'Revisión guardada y estado actualizado',
+                id: result.insertId,
+                avanceId,
+                resultado
+            });
         });
     });
 };

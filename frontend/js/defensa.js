@@ -34,10 +34,25 @@ export function renderGuideReviewAndDefense() {
     <div class="combined-review-layout" data-defense-student-id="${DEMO_STUDENT_ID}" data-review-student-id="${DEMO_STUDENT_ID}">
       <section class="interaction-panel review-panel">
         <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
-        <div class="review-document"><span class="file-icon">PDF</span><div><strong>Avance_memoria_v03.pdf</strong><small>Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span></div>
-        <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
-        <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus"><option value="">Cargando avances...</option></select>
-        <p class="decision-feedback" id="reviewAdvanceStatus" role="status">Consultando avances...</p>
+        <div class="review-document"><span class="file-icon">PDF</span><div><strong id="selectedAdvanceName">Avance_memoria_v03.pdf</strong><small id="selectedAdvanceMeta">Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span><a class="action-button" id="downloadAdvanceButton" href="#" target="_blank" rel="noopener" style="display:none;">Abrir PDF</a><a id="selectedAdvanceLink" href="#" style="display:none;"></a></div>
+        
+        <div style="display: flex; gap: 16px; margin: 16px 0;">
+          <div style="flex: 1;">
+            <label class="field-label" for="reviewStudent">Seleccionar memorista</label>
+            <select id="reviewStudent" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+              <option value="">Cargando memoristas...</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
+            <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+              <option value="">Cargando avances...</option>
+            </select>
+          </div>
+        </div>
+        
+        <p class="decision-feedback" id="reviewAdvanceStatus" role="status" style="margin-top: -8px; margin-bottom: 16px;">Consultando avances...</p>
+        
         <label class="field-label" for="reviewNotes">Observaciones para el memorista</label>
         <textarea id="reviewNotes" rows="4" placeholder="Escribe las correcciones y comentarios de esta versión..."></textarea>
         <div class="decision-actions">

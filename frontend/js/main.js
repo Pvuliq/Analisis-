@@ -56,7 +56,7 @@ const roleProfiles = {
     workspaceNote: 'Supervisa el avance de tus memoristas y atiende las revisiones pendientes.',
     welcomeTitle: 'Revisa el progreso de tus memoristas.',
     welcomeDescription: 'Consulta las entregas, registra observaciones y acompaña cada etapa de sus memorias.',
-    status: '3 revisiones pendientes',
+    status: 'Consultando...', 
     quickTitle: 'Gestiona tu tutoría',
     quickCount: '3 áreas disponibles',
     areaDescriptions: [
@@ -66,7 +66,7 @@ const roleProfiles = {
     ],
     activityLabel: 'Bandeja docente',
     activityMeta: 'Pendientes de atención',
-    activityTitle: '3 entregas esperan revisión',
+    activityTitle: 'Consultando entregas...', 
     activityDescription: 'Hay memoristas con avances listos para que registres tus observaciones.',
     nextLabel: 'Siguiente tarea',
     nextTitle: 'Revisar entregas pendientes',
@@ -80,6 +80,29 @@ const sectionMessages = {
   revisiones: 'Observaciones y correcciones asociadas a cada avance.',
   defensa: 'Requisitos y autorización para el examen de título.'
 };
+
+async function loadGuidePendingCount() {
+  try {
+    if (activeRole !== 'guide') return;
+    
+    const pending = await get('/api/revisiones/pendientes');
+    
+    if (Array.isArray(pending)) {
+      const count = pending.length;
+      
+      if (statusBadge) {
+        statusBadge.textContent = count === 1 ? '1 REVISIÓN PENDIENTE' : `${count} REVISIONES PENDIENTES`;
+      }
+      
+      if (activityTitle && currentSection === 'inicio') {
+        activityTitle.textContent = count === 1 ? '1 entrega espera revisión' : `${count} entregas esperan revisión`;
+      }
+    }
+  } catch (error) {
+    console.error('Error al cargar la cantidad de pendientes:', error);
+    if (statusBadge) statusBadge.textContent = 'Error de conexión';
+  }
+}
 
 function updateHomeRole(role) {
   const profile = roleProfiles[role];
@@ -192,8 +215,7 @@ function renderStudentDeliverySummary(deliveries = []) {
       <div class="delivery-row">
         <span class="delivery-type">PDF</span>
         <span class="delivery-info"><strong>${delivery.nombreArchivo}</strong><small>${formatDeliveryDate(delivery.fechaEntrega)} · ${formatBytes(delivery.tamanoBytes)}</small></span>
-        <span class="delivery-status ${delivery.estado === 'Revisado' ? 'status-done' : 'status-review'}">${delivery.estado}</span>
-      </div>
+        <span class="delivery-status ${String(delivery.estado).toLowerCase() === 'revisado' ? 'status-done' : 'status-review'}">${String(delivery.estado).toUpperCase()}</span>      </div>
     `).join('')}
   `;
 }

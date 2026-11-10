@@ -22,11 +22,21 @@ function updateSelectedAdvance(root, option) {
 
 function renderAdvanceSelector() {
   return `
-    <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
-    <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus">
-      <option value="">Cargando avances...</option>
-    </select>
-    <p class="decision-feedback" id="reviewAdvanceStatus" role="status">Consultando avances...</p>
+    <div style="display: flex; gap: 16px; margin: 16px 0;">
+      <div style="flex: 1;">
+        <label class="field-label" for="reviewStudent">Seleccionar memorista</label>
+        <select id="reviewStudent" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+          <option value="">Cargando memoristas...</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
+        <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+          <option value="">Cargando avances...</option>
+        </select>
+      </div>
+    </div>
+    <p class="decision-feedback" id="reviewAdvanceStatus" role="status" style="margin-top: -8px; margin-bottom: 16px;">Consultando avances...</p>
   `;
 }
 
@@ -144,7 +154,10 @@ export function bindReviewEvents(root = document) {
           throw new Error('El servidor devolvió una lista de avances inválida.');
         }
 
+        const reviewStudent = root.querySelector('#reviewStudent');
+
         if (advances.length === 0) {
+          if (reviewStudent) reviewStudent.innerHTML = '<option value="">No hay memoristas pendientes</option>';
           reviewAdvance.innerHTML = '<option value="">No hay avances para revisar</option>';
           if (reviewAdvanceStatus) reviewAdvanceStatus.textContent = 'Primero debe registrarse un avance.';
           return;
@@ -168,10 +181,12 @@ export function bindReviewEvents(root = document) {
       })
       .catch((error) => {
         reviewAdvance.innerHTML = '<option value="">No se pudieron cargar los avances</option>';
-        if (reviewAdvanceStatus) {
-          reviewAdvanceStatus.textContent = `Error al cargar los avances: ${error.message}`;
-        }
+        if (reviewAdvanceStatus) reviewAdvanceStatus.textContent = `Error al cargar los avances: ${error.message}`;
       });
+      
+    reviewAdvance.addEventListener('change', () => {
+      updateSelectedAdvance(root, reviewAdvance.options[reviewAdvance.selectedIndex]);
+    });
   }
 
   reviewAdvance?.addEventListener('change', () => {

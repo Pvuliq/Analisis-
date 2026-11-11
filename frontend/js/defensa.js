@@ -7,11 +7,9 @@ function activeStudentId() {
   return user?.estudianteId || user?.rut || '';
 }
 
-function renderApprovalPanel(compact = false) {
-  const panelClass = compact ? 'compact-approval-panel' : 'approval-panel';
-
+function renderApprovalPanel() {
   return `
-    <section class="interaction-panel ${panelClass}">
+    <section class="interaction-panel approval-panel">
       <div class="panel-topline"><span class="story-symbol">03</span><span>HU-07 · Defensa</span></div>
       <h4>Checklist para autorizar defensa</h4>
       <p>El sistema comprobará los requisitos de la memoria antes de registrar la autorización.</p>
@@ -33,9 +31,9 @@ function renderApprovalPanel(compact = false) {
   `;
 }
 
-export function renderGuideReviewAndDefense() {
+export function renderGuideReview() {
   return `
-    <div class="combined-review-layout" data-defense-student-id="" data-review-mode="guide" data-review-student-id="">
+    <div class="review-only-layout" data-review-mode="guide" data-review-student-id="">
       <section class="interaction-panel review-panel">
         <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
         <div class="review-document"><span class="file-icon">PDF</span><div><strong id="selectedAdvanceName">Avance_memoria_v03.pdf</strong><small id="selectedAdvanceMeta">Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span><a class="action-button" id="downloadAdvanceButton" href="#" target="_blank" rel="noopener" style="display:none;">Abrir PDF</a><a id="selectedAdvanceLink" href="#" style="display:none;"></a></div>
@@ -65,7 +63,7 @@ export function renderGuideReviewAndDefense() {
         </div>
         <p class="decision-feedback" id="reviewFeedback">Indica si esta versión cumple con el estándar esperado.</p>
       </section>
-      ${renderApprovalPanel(true)}
+      </section>
     </div>
   `;
 }
@@ -121,13 +119,17 @@ export function renderDefense(isGuide) {
   if (isGuide) {
     return `
       <div class="scenario-grid" data-defense-student-id="">
+        <section class="interaction-panel">
+          <div class="panel-topline"><span class="story-symbol">03</span><span>HU-07 · Defensa</span></div>
+          <h4>Seleccionar documento</h4>
+          <p>Selecciona una entrega. El sistema solo autorizará documentos marcados como versión final.</p>
+          <label class="field-label" for="defenseStudentSelect">Documento de memoria</label>
+          <select id="defenseStudentSelect" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+            <option value="">Cargando documentos...</option>
+          </select>
+          <p class="decision-feedback" data-defense-selection-feedback role="status">Consultando documentos...</p>
+        </section>
         ${renderApprovalPanel()}
-        <aside class="evidence-panel">
-          <p class="section-label">Estado de la memoria</p>
-          <strong data-defense-state>Consultando...</strong>
-          <p>El estado se obtiene del proceso registrado en el servidor.</p>
-          <span class="decision-tag">F-03 · HU-07</span>
-        </aside>
       </div>
     `;
   }
@@ -164,12 +166,13 @@ function validateDefenseState(data) {
   return data;
 }
 
-function updateRequirement(root, name, complete, completeText, pendingText) {
+function updateRequirement(root, name, complete, completeText, pendingText, rejected = false) {
   const item = root.querySelector(`[data-requirement="${name}"]`);
   if (!item) return;
 
   item.classList.toggle('requirement-ok', complete);
   item.classList.toggle('requirement-pending', !complete);
+  item.classList.toggle('requirement-rejected', rejected);
   const status = item.querySelector('[data-requirement-status]');
   if (status) status.textContent = complete ? completeText : pendingText;
 }
@@ -184,14 +187,17 @@ function displayDefenseState(root, state) {
     'final',
     state.versionFinalRegistrada,
     'Registrada',
-    'Pendiente'
+    state.avanceId ? 'No, marcado como no final' : 'Pendiente'
   );
   updateRequirement(
     root,
     'review',
     state.revisionFinalAprobada,
     'Aprobada',
-    'Pendiente'
+    !state.versionFinalRegistrada
+      ? 'No aplica (documento no final)'
+      : state.revisionFinalResultado === 'Necesita correcciones' ? 'Reprobada' : 'Pendiente',
+    state.versionFinalRegistrada && state.revisionFinalResultado === 'Necesita correcciones'
   );
   updateRequirement(
     root,
@@ -204,8 +210,7 @@ function displayDefenseState(root, state) {
   const action = root.querySelector('[data-approval-action]');
   if (action) {
     action.disabled = state.autorizacionEmitida
-      || !state.versionFinalRegistrada
-      || !state.revisionFinalAprobada;
+      || (state.versionFinalRegistrada && !state.revisionFinalAprobada);
     action.textContent = state.autorizacionEmitida
       ? 'Visto bueno emitido'
       : 'Emitir visto bueno';
@@ -213,11 +218,45 @@ function displayDefenseState(root, state) {
   }
 }
 
+function displayNoDefenseStudent(root, message) {
+  root.dataset.defenseStudentId = '';
+  root.querySelectorAll('[data-defense-state]').forEach((element) => {
+    element.textContent = 'Sin documento seleccionado';
+  });
+  ['final', 'review', 'authorization'].forEach((name) => {
+    const item = root.querySelector(`[data-requirement="${name}"]`);
+    if (!item) return;
+    item.classList.remove('requirement-ok');
+    item.classList.remove('requirement-rejected');
+    item.classList.add('requirement-pending');
+    const status = item.querySelector('[data-requirement-status]');
+    if (status) status.textContent = 'Sin datos';
+  });
+  const action = root.querySelector('[data-approval-action]');
+  if (action) action.disabled = true;
+  const selectionFeedback = root.querySelector('[data-defense-selection-feedback]');
+  if (selectionFeedback) {
+    selectionFeedback.style.color = 'var(--muted)';
+    selectionFeedback.textContent = message;
+  }
+  const feedback = getDefenseFeedback(root);
+  if (feedback) {
+    feedback.style.color = 'var(--muted)';
+    feedback.textContent = message;
+  }
+}
+
+function getDefenseFeedback(root) {
+  return root.querySelector('.approval-panel [data-defense-feedback]')
+    || root.querySelector('[data-defense-feedback]');
+}
+
 function getStudentId(root) {
-  const selectedOption = root.querySelector('#reviewAdvance option:checked');
-  const id = selectedOption?.dataset.studentId
-    || root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId
-    || activeStudentId();
+  const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+  const selectedOption = defenseStudentSelect?.selectedOptions[0];
+  const id = defenseStudentSelect
+    ? selectedOption?.dataset.studentId
+    : root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId || activeStudentId();
   if (!/^\d{8,9}-[\dKk]$/.test(id)) {
     throw new Error('No se pudo determinar la memoria que se está autorizando.');
   }
@@ -225,15 +264,30 @@ function getStudentId(root) {
   return id;
 }
 
-async function loadDefenseState(root, studentId) {
-  const feedback = root.querySelector('[data-defense-feedback]');
+function getSelectedAdvanceId(root) {
+  const value = root.querySelector('#defenseStudentSelect')?.value;
+  const advanceId = Number(value);
+  return Number.isInteger(advanceId) && advanceId > 0 ? advanceId : null;
+}
+
+async function loadDefenseState(root, studentId, advanceId = null) {
+  const feedback = getDefenseFeedback(root);
   const action = root.querySelector('[data-approval-action]');
   if (action) action.disabled = true;
+  if (feedback) {
+    feedback.style.color = 'var(--muted)';
+    feedback.textContent = 'Consultando los requisitos en el servidor...';
+  }
 
   try {
     const state = validateDefenseState(
-      await get(`${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}`)
+      await get(
+        `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}`
+        + (advanceId ? `?avanceId=${encodeURIComponent(advanceId)}` : '')
+      )
     );
+    const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+    if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
     displayDefenseState(root, state);
 
     if (feedback) {
@@ -241,20 +295,25 @@ async function loadDefenseState(root, studentId) {
       if (state.autorizacionEmitida) {
         feedback.textContent = 'La autorización está registrada.';
       } else if (!state.versionFinalRegistrada) {
-        feedback.textContent = 'Aún no se ha registrado la versión final del documento.';
+        feedback.textContent = 'El documento seleccionado no está marcado como versión final. No se puede emitir el visto bueno.';
       } else if (!state.revisionFinalAprobada) {
-        feedback.textContent = 'La revisión de la versión final aún no está aprobada.';
+        feedback.textContent = state.revisionFinalResultado === 'Necesita correcciones'
+          ? 'La revisión más reciente de la versión final requiere correcciones.'
+          : 'La revisión de la versión final aún no está aprobada.';
       } else {
         feedback.textContent = 'Los requisitos están cumplidos. El Profesor Guía puede emitir el visto bueno.';
       }
     }
   } catch (error) {
+    const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+    if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
     root.querySelectorAll('[data-defense-state]').forEach((element) => {
       element.textContent = 'No disponible';
     });
-    if (feedback) {
-      feedback.style.color = '#c0392b';
-      feedback.textContent = `No se pudo consultar el estado de defensa: ${error.message}`;
+    const defenseFeedback = getDefenseFeedback(root);
+    if (defenseFeedback) {
+      defenseFeedback.style.color = '#c0392b';
+      defenseFeedback.textContent = `No se pudo consultar el estado de defensa: ${error.message}`;
     }
   }
 }
@@ -391,34 +450,87 @@ export function bindDefenseEvents(root = document) {
   const panel = root.querySelector('[data-defense-student-id]');
   if (!panel) return;
 
-  let studentId;
-  try {
-    studentId = getStudentId(root);
-  } catch (error) {
-    const feedback = root.querySelector('[data-defense-feedback]');
-    if (feedback) {
-      feedback.style.color = '#c0392b';
-      feedback.textContent = error.message;
+  const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+  let initialStudentId;
+  if (defenseStudentSelect) {
+    displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+  } else {
+    try {
+      initialStudentId = getStudentId(root);
+    } catch (error) {
+      const feedback = root.querySelector('[data-defense-feedback]');
+      if (feedback) {
+        feedback.style.color = '#c0392b';
+        feedback.textContent = error.message;
+      }
+      return;
     }
-    return;
   }
 
-  root.addEventListener('advance:selected', (event) => {
-    if (!event.detail?.estudianteId) return;
-    loadDefenseState(root, event.detail.estudianteId);
-  });
+  if (initialStudentId) loadDefenseState(root, initialStudentId);
 
-  loadDefenseState(root, studentId);
+  if (defenseStudentSelect) {
+    get(`${DEFENSE_API_PATH}/documentos`)
+      .then((reports) => {
+        if (!Array.isArray(reports)) {
+          throw new Error('El servidor devolvió una lista de documentos inválida.');
+        }
+
+        defenseStudentSelect.replaceChildren(new Option('Selecciona un documento', ''));
+        reports.forEach((report) => {
+          const option = new Option(
+            `${report.estudianteId} · ${report.nombreArchivo} · ${Number(report.esVersionFinal) === 1 ? 'Versión final' : 'No final'}`,
+            report.avanceId
+          );
+          option.dataset.studentId = report.estudianteId;
+          option.dataset.esVersionFinal = String(Number(report.esVersionFinal) === 1);
+          defenseStudentSelect.add(option);
+        });
+
+        if (reports.length === 0) {
+          defenseStudentSelect.replaceChildren(new Option('No hay documentos registrados', ''));
+          displayNoDefenseStudent(root, 'No hay documentos registrados para revisar.');
+        } else {
+          displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+        }
+      })
+      .catch((error) => {
+        defenseStudentSelect.replaceChildren(new Option('No se pudieron cargar los documentos', ''));
+        displayNoDefenseStudent(root, `No se pudieron cargar los documentos: ${error.message}`);
+        const selectionFeedback = root.querySelector('[data-defense-selection-feedback]');
+        if (selectionFeedback) selectionFeedback.style.color = '#c0392b';
+      });
+
+    defenseStudentSelect.addEventListener('change', () => {
+      if (!defenseStudentSelect.value) {
+        displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+        return;
+      }
+      const studentId = getStudentId(root);
+      const advanceId = getSelectedAdvanceId(root);
+      root.dataset.defenseStudentId = studentId;
+      loadDefenseState(root, studentId, advanceId);
+    });
+  }
 
   const action = root.querySelector('[data-approval-action]');
   if (!action) return;
 
-  root.addEventListener('review:created', (event) => {
-    if (event.detail.avanceId) loadDefenseState(root, studentId);
-  });
-
   action.addEventListener('click', async () => {
-    const feedback = root.querySelector('[data-defense-feedback]');
+    const feedback = getDefenseFeedback(root);
+    let studentId;
+    let advanceId;
+    try {
+      studentId = getStudentId(root);
+      advanceId = getSelectedAdvanceId(root);
+    } catch (error) {
+      if (feedback) {
+        feedback.style.color = '#c0392b';
+        feedback.textContent = error.message;
+      }
+      return;
+    }
+
     action.disabled = true;
     action.textContent = 'Enviando autorización...';
     if (feedback) {
@@ -430,10 +542,11 @@ export function bindDefenseEvents(root = document) {
       const state = validateDefenseState(
         await post(
           `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}/autorizacion`,
-          {},
+          { avanceId },
           { headers: { 'Content-Type': 'application/json', 'x-role': 'guide' } }
         )
       );
+      if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
       displayDefenseState(root, state);
 
       if (feedback) {
@@ -449,7 +562,8 @@ export function bindDefenseEvents(root = document) {
         }
       }
     } catch (error) {
-      await loadDefenseState(root, studentId);
+      if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
+      await loadDefenseState(root, studentId, advanceId);
       if (feedback) {
         feedback.style.color = '#c0392b';
         feedback.textContent = `No se pudo emitir el visto bueno: ${error.message}`;

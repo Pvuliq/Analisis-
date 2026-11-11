@@ -3,6 +3,7 @@ const multer = require('multer');
 const router = new express.Router();
 
 const index = require('../controllers/index');
+const defensasController = require('../controllers/defensasController');
 
 const upload = multer({
 	storage: multer.memoryStorage(),
@@ -26,6 +27,8 @@ router.get('/api/actividad', index.listStudentActivity);
 router.get('/api/avances/:id/descargar', index.downloadAdvance);
 router.use('/api/revisiones', require('./revisionesRoutes'));
 router.use('/api/defensas', require('./defensasRoutes'));
+router.post('/api/evaluaciones/correferente', defensasController.guardarEvaluacionCorreferente);
+router.get('/api/evaluaciones/correferente/:estudianteId', defensasController.obtenerEvaluacionCorreferente);
 
 router.use((error, req, res, next) => {
 	if (!(error instanceof multer.MulterError)) return next(error);

@@ -91,7 +91,7 @@ async function loadGuidePendingCount() {
       const count = pending.length;
       
       if (statusBadge) {
-        statusBadge.textContent = count === 1 ? '1 REVISIÓN PENDIENTE' : `${count} REVISIONES PENDIENTES`;
+        statusBadge.textContent = count === 1 ? '1 revisión pendiente' : `${count} revisiones pendientes`;
       }
       
       if (activityTitle && currentSection === 'inicio') {
@@ -352,10 +352,12 @@ const currentUser = getCurrentUser();
 if (currentUser) {
   activeRole = roleToView(currentUser.role);
   updateHomeRole(activeRole);
+  loadGuidePendingCount();
 }
 
 document.addEventListener('auth:ready', (event) => {
   activeRole = roleToView(event.detail.role);
   updateHomeRole(activeRole);
   showHome();
+  loadGuidePendingCount(); 
 });

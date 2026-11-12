@@ -18,12 +18,7 @@ const quickCount = document.querySelector('#quickCount');
 const quickContent = document.querySelector('#quickContent');
 const activityLabel = document.querySelector('#activityLabel');
 const activityMeta = document.querySelector('#activityMeta');
-const activityTitle = document.querySelector('#activityTitle');
-const activityDescription = document.querySelector('#activityDescription');
-const nextLabel = document.querySelector('#nextLabel');
-const nextTitle = document.querySelector('#nextTitle');
-const nextDescription = document.querySelector('#nextDescription');
-const primaryButton = document.querySelector('#primaryButton');
+const activityContent = document.querySelector('#activityContent');
 
 let currentSection = 'inicio';
 let activeRole = 'student';
@@ -46,10 +41,6 @@ const roleProfiles = {
     activityMeta: 'Últimos movimientos',
     activityTitle: 'Aún no hay actividad',
     activityDescription: 'Tus entregas y revisiones aparecerán aquí.',
-    nextLabel: 'Próximo hito',
-    nextTitle: 'Registrar una nueva entrega',
-    nextDescription: 'Cuando tengas una nueva versión de tu documento, podrás cargarla para iniciar la revisión.',
-    primary: 'Subir nuevo avance'
   },
   guide: {
     workspaceTitle: 'Panel de seguimiento',
@@ -68,10 +59,6 @@ const roleProfiles = {
     activityMeta: 'Pendientes de atención',
     activityTitle: 'Consultando entregas...', 
     activityDescription: 'Hay memoristas con avances listos para que registres tus observaciones.',
-    nextLabel: 'Siguiente tarea',
-    nextTitle: 'Revisar entregas pendientes',
-    nextDescription: 'Abre tu bandeja de revisiones para evaluar los avances que recibiste esta semana.',
-    primary: 'Ir a revisiones'
   }
 };
 
@@ -84,23 +71,32 @@ const sectionMessages = {
 async function loadGuidePendingCount() {
   try {
     if (activeRole !== 'guide') return;
-    
+
     const pending = await get('/api/revisiones/pendientes');
-    
-    if (Array.isArray(pending)) {
-      const count = pending.length;
-      
-      if (statusBadge) {
-        statusBadge.textContent = count === 1 ? '1 REVISIÓN PENDIENTE' : `${count} REVISIONES PENDIENTES`;
-      }
-      
-      if (activityTitle && currentSection === 'inicio') {
-        activityTitle.textContent = count === 1 ? '1 entrega espera revisión' : `${count} entregas esperan revisión`;
-      }
+    if (!Array.isArray(pending)) {
+      throw new Error('El servidor devolvió una lista de entregas inválida.');
+    }
+
+    const count = pending.length;
+    if (statusBadge) {
+      statusBadge.textContent = count === 0
+        ? 'Sin revisiones pendientes'
+        : count === 1 ? '1 revisión pendiente' : `${count} revisiones pendientes`;
+    }
+
+    if (activityContent && currentSection === 'inicio') {
+      activityContent.innerHTML = renderGuideNotifications(pending);
     }
   } catch (error) {
     console.error('Error al cargar la cantidad de pendientes:', error);
     if (statusBadge) statusBadge.textContent = 'Error de conexión';
+    if (activityContent && currentSection === 'inicio') {
+      activityContent.innerHTML = `
+        <span class="empty-mark">!</span>
+        <strong>No se pudieron cargar las entregas</strong>
+        <p>Intenta nuevamente más tarde. ${escapeHtml(error.message)}</p>
+      `;
+    }
   }
 }
 
@@ -123,13 +119,11 @@ function updateHomeRole(role) {
   }
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
-  activityTitle.textContent = profile.activityTitle;
-  activityDescription.textContent = profile.activityDescription;
-  nextLabel.textContent = profile.nextLabel;
-  nextTitle.textContent = profile.nextTitle;
-  nextDescription.textContent = profile.nextDescription;
-  primaryButton.textContent = profile.primary;
-  primaryButton.dataset.section = role === 'guide' ? 'revisiones' : 'avances';
+  activityContent.innerHTML = `
+    <span class="empty-mark">+</span>
+    <strong>${escapeHtml(profile.activityTitle)}</strong>
+    <p>${escapeHtml(profile.activityDescription)}</p>
+  `;
 }
 
 function setActiveNavigation(section) {
@@ -285,6 +279,33 @@ function renderStudentActivity(activity = []) {
   `;
 }
 
+function renderGuideNotifications(pending = []) {
+  if (pending.length === 0) {
+    activityMeta.textContent = 'Pendientes de atención';
+    return `
+      <span class="empty-mark">+</span>
+      <strong>Sin entregas pendientes</strong>
+      <p>Cuando un memorista registre un avance, aparecerá aquí.</p>
+    `;
+  }
+
+  activityMeta.textContent = `${pending.length} ${pending.length === 1 ? 'pendiente' : 'pendientes'}`;
+  return `
+    <div class="activity-list">
+      ${pending.map((advance) => `
+        <article class="activity-item">
+          <span class="activity-icon">↑</span>
+          <div>
+            <strong>Nuevo avance de memorista</strong>
+            <p>${escapeHtml(advance.estudianteIdentificacion || advance.estudianteId)} · ${escapeHtml(advance.nombreArchivo)}</p>
+            <small>${escapeHtml(formatActivityDate(advance.fechaEntrega))}</small>
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
 async function loadStudentActivity() {
   try {
     const user = getCurrentUser();
@@ -293,7 +314,7 @@ async function loadStudentActivity() {
 
     const activity = await get(`/api/actividad?estudianteId=${encodeURIComponent(estudianteId)}`);
     if (activeRole === 'student' && currentSection === 'inicio') {
-      document.querySelector('#activityContent').innerHTML = renderStudentActivity(activity);
+      activityContent.innerHTML = renderStudentActivity(activity);
     }
   } catch (error) {
     console.error('No se pudo cargar la actividad del estudiante:', error);
@@ -352,10 +373,12 @@ const currentUser = getCurrentUser();
 if (currentUser) {
   activeRole = roleToView(currentUser.role);
   updateHomeRole(activeRole);
+  loadGuidePendingCount();
 }
 
 document.addEventListener('auth:ready', (event) => {
   activeRole = roleToView(event.detail.role);
   updateHomeRole(activeRole);
   showHome();
+  loadGuidePendingCount(); 
 });

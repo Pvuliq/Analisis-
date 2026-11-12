@@ -1,6 +1,10 @@
 const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
 const AUTH_API_BASE_URL = window.AUTH_API_BASE_URL || 'http://localhost:8081';
 
+export function apiUrl(endpoint) {
+  return `${API_BASE_URL}${endpoint}`;
+}
+
 export function getAuthToken() {
   return sessionStorage.getItem('authToken');
 }
@@ -26,7 +30,7 @@ async function parseResponse(response) {
 
 export async function apiRequest(endpoint, options = {}) {
   const isFormData = options.body instanceof FormData;
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(apiUrl(endpoint), {
     ...options,
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),

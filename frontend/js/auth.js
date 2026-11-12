@@ -9,11 +9,24 @@ const studentRole = document.querySelector('#loggedStudentRole');
 const userRole = document.querySelector('#loggedRole');
 const logoutButton = document.querySelector('#logoutButton');
 
+function persistAuthenticatedUser(user) {
+  const normalizedUser = { ...user, role: normalizeRole(user?.role ?? user?.rol) };
+  const serialized = JSON.stringify(normalizedUser);
+  sessionStorage.setItem('authUser', serialized);
+  localStorage.setItem('authUser', serialized);
+  return normalizedUser;
+}
+
 export function getCurrentUser() {
   const value = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
   if (!value) return null;
   try {
-    return JSON.parse(value);
+    const parsed = JSON.parse(value);
+    const normalizedUser = { ...parsed, role: normalizeRole(parsed?.role ?? parsed?.rol) };
+    if (normalizedUser.role !== (parsed?.role ?? parsed?.rol)) {
+      persistAuthenticatedUser(normalizedUser);
+    }
+    return normalizedUser;
   } catch {
     sessionStorage.removeItem('authUser');
     sessionStorage.removeItem('authToken');
@@ -22,21 +35,42 @@ export function getCurrentUser() {
   }
 }
 
+export function normalizeRole(role) {
+  if (typeof role !== 'string') return 'memorista';
+  const normalized = role.trim().toLowerCase();
+  if (['profesor_guia', 'profesor', 'guia'].includes(normalized)) return 'profesor_guia';
+  if (normalized === 'correferente') return 'correferente';
+  return 'memorista';
+}
+
 export function roleToView(role) {
-  return ['profesor_guia', 'profesor'].includes(role) ? 'guide' : 'student';
+  const normalizedRole = normalizeRole(role);
+  if (['profesor_guia', 'profesor'].includes(normalizedRole)) return 'guide';
+  if (normalizedRole === 'correferente') return 'reviewer';
+  return 'student';
 }
 
 function showAuthenticated(user) {
   loginView.hidden = true;
   appShell.hidden = false;
-  userName.textContent = user.name;
-  studentRole.textContent = user.rolUniversitario ? `ROL: ${user.rolUniversitario}` : '';
-  userRole.textContent = user.role === 'profesor_guia' ? 'Profesor guía' : 'Memorista';
+  const normalizedUser = persistAuthenticatedUser(user);
+  const normalizedRole = normalizedUser.role;
+  userName.textContent = normalizedUser.name;
+  studentRole.textContent = normalizedUser.rolUniversitario ? `ROL: ${normalizedUser.rolUniversitario}` : '';
+  if (normalizedRole === 'profesor_guia') {
+    userRole.textContent = 'Profesor guía';
+  } else if (normalizedRole === 'correferente') {
+    userRole.textContent = 'Correferente';
+  } else {
+    userRole.textContent = 'Memorista';
+  }
   logoutButton.hidden = false;
-  document.dispatchEvent(new CustomEvent('auth:ready', { detail: user }));
+  document.dispatchEvent(new CustomEvent('auth:ready', { detail: normalizedUser }));
 }
 
 function showLogin() {
+  sessionStorage.removeItem('authUser');
+  localStorage.removeItem('authUser');
   loginView.hidden = false;
   appShell.hidden = true;
   logoutButton.hidden = true;

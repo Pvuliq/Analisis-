@@ -1,11 +1,12 @@
 import { bindAdvanceEvents, renderGuideAdvances, renderStudentAdvances } from './avances.js';
 import { bindReviewEvents, renderReviews } from './revisiones.js';
 import { bindDefenseEvents, renderDefense, renderGuideReviewAndDefense } from './defensa.js';
+import { bindCorreferenteEvents, renderCorreferenteView } from './correferente.js';
 import { get } from './api.js';
 import { getCurrentUser, roleToView } from './auth.js';
-
-const navigationItems = document.querySelectorAll('.nav-item');
+const activityPanel = document.querySelector('.activity-panel');
 const homeLayout = document.querySelector('.home-layout');
+const navigationItems = document.querySelectorAll('.nav-item');
 const featureView = document.querySelector('#featureView');
 const workspace = document.querySelector('.workspace');
 const workspaceTitle = document.querySelector('#workspaceTitle');
@@ -19,6 +20,10 @@ const quickContent = document.querySelector('#quickContent');
 const activityLabel = document.querySelector('#activityLabel');
 const activityMeta = document.querySelector('#activityMeta');
 const activityContent = document.querySelector('#activityContent');
+const nextLabel = document.querySelector('#nextLabel');
+const nextTitle = document.querySelector('#nextTitle');
+const nextDescription = document.querySelector('#nextDescription');
+const primaryButton = document.querySelector('#primaryButton');
 
 let currentSection = 'inicio';
 let activeRole = 'student';
@@ -41,6 +46,10 @@ const roleProfiles = {
     activityMeta: 'Últimos movimientos',
     activityTitle: 'Aún no hay actividad',
     activityDescription: 'Tus entregas y revisiones aparecerán aquí.',
+    nextLabel: 'Próximo hito',
+    nextTitle: 'Registrar una nueva entrega',
+    nextDescription: 'Cuando tengas una nueva versión de tu documento, podrás cargarla para iniciar la revisión.',
+    primary: 'Subir nuevo avance'
   },
   guide: {
     workspaceTitle: 'Panel de seguimiento',
@@ -59,6 +68,30 @@ const roleProfiles = {
     activityMeta: 'Pendientes de atención',
     activityTitle: 'Consultando entregas...', 
     activityDescription: 'Hay memoristas con avances listos para que registres tus observaciones.',
+    nextLabel: 'Siguiente tarea',
+    nextTitle: 'Revisar entregas pendientes',
+    nextDescription: 'Abre tu bandeja de revisiones para evaluar los avances que recibiste esta semana.',
+    primary: 'Ir a revisiones'
+  },
+  reviewer: {
+    workspaceTitle: 'Evaluación de informe final',
+    workspaceNote: 'Evalúa el documento final y emite tu calificación de correferente.',
+    welcomeTitle: 'Evaluaciones pendientes.',
+    welcomeDescription: 'Revisa las memorias autorizadas para calificar el informe final de titulación.',
+    status: 'Correferente',
+    quickTitle: 'Gestión de correferencia',
+    quickCount: '1 tarea activa',
+    areaDescriptions: [
+      ['Defensas', 'Califica informes escritos de estudiantes aptos']
+    ],
+    activityLabel: 'Bandeja correferente',
+    activityMeta: 'Revisiones finales',
+    activityTitle: 'Memorias listas para evaluar',
+    activityDescription: 'Consulta los informes finales de los estudiantes aptos para defensa.',
+    nextLabel: 'Siguiente tarea',
+    nextTitle: 'Evaluar informe final',
+    nextDescription: 'Ingresa a la sección de evaluación para calificar los informes asignados.',
+    primary: 'Evaluar informe'
   }
 };
 
@@ -84,24 +117,15 @@ async function loadGuidePendingCount() {
         : count === 1 ? '1 revisión pendiente' : `${count} revisiones pendientes`;
     }
 
-    if (activityContent && currentSection === 'inicio') {
-      activityContent.innerHTML = renderGuideNotifications(pending);
-    }
   } catch (error) {
     console.error('Error al cargar la cantidad de pendientes:', error);
     if (statusBadge) statusBadge.textContent = 'Error de conexión';
-    if (activityContent && currentSection === 'inicio') {
-      activityContent.innerHTML = `
-        <span class="empty-mark">!</span>
-        <strong>No se pudieron cargar las entregas</strong>
-        <p>Intenta nuevamente más tarde. ${escapeHtml(error.message)}</p>
-      `;
-    }
   }
 }
 
 function updateHomeRole(role) {
   const profile = roleProfiles[role];
+  if (!profile) return;
 
   workspaceTitle.textContent = profile.workspaceTitle;
   workspaceNote.textContent = profile.workspaceNote;
@@ -110,15 +134,29 @@ function updateHomeRole(role) {
   statusBadge.textContent = profile.status;
   quickTitle.textContent = profile.quickTitle;
   quickCount.textContent = profile.quickCount;
-  quickContent.innerHTML = role === 'guide'
-    ? renderGuideQuickLinks()
-    : renderStudentDeliverySummary();
-  if (role === 'student') {
+
+  if (activityPanel) {
+    activityPanel.style.display = (role === 'reviewer') ? 'none' : '';
+  }
+  if (homeLayout) {
+    homeLayout.style.gridTemplateColumns = (role === 'reviewer') ? '1fr' : '';
+  }
+
+  if (role === 'guide') {
+    quickContent.innerHTML = renderGuideQuickLinks();
+    loadGuideActivity();
+  } else if (role === 'reviewer') {
+    quickContent.innerHTML = `
+      <p style="color: var(--muted); margin: 8px 0 16px 0; font-size: 14px;">
+        Revisa las entregas finales disponibles y califica el informe escrito.
+      </p>
+    `;
+  } else {
+    quickContent.innerHTML = renderStudentDeliverySummary();
     loadStudentDeliveries();
     loadStudentActivity();
-  } else {
-    loadGuideActivity();
   }
+
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
   activityContent.innerHTML = `
@@ -126,12 +164,31 @@ function updateHomeRole(role) {
     <strong>${escapeHtml(profile.activityTitle)}</strong>
     <p>${escapeHtml(profile.activityDescription)}</p>
   `;
+  if (nextLabel) nextLabel.textContent = profile.nextLabel;
+  if (nextTitle) nextTitle.textContent = profile.nextTitle;
+  if (nextDescription) nextDescription.textContent = profile.nextDescription;
+  if (primaryButton) primaryButton.textContent = profile.primary;
+
+  if (primaryButton) {
+    primaryButton.dataset.section = role === 'guide'
+      ? 'revisiones'
+      : role === 'reviewer' ? 'defensa' : 'avances';
+  }
+  setActiveNavigation(currentSection);
 }
 
 function setActiveNavigation(section) {
+  currentSection = section;
   navigationItems.forEach((item) => {
-    item.hidden = activeRole === 'guide' && item.dataset.section === 'avances';
-    item.classList.toggle('is-active', item.dataset.section === section);
+    const s = item.dataset.section;
+    if (activeRole === 'reviewer') {
+      item.hidden = (s === 'avances' || s === 'revisiones');
+    } else if (activeRole === 'guide') {
+      item.hidden = (s === 'avances');
+    } else {
+      item.hidden = false;
+    }
+    item.classList.toggle('is-active', s === section);
   });
 }
 
@@ -149,6 +206,10 @@ function featureHeader(identifier, title, description, role) {
 }
 
 function bindFeatureEvents() {
+  if (activeRole === 'reviewer') {
+    bindCorreferenteEvents(featureView);
+    return;
+  }
   bindAdvanceEvents(featureView);
   bindReviewEvents(featureView);
   bindDefenseEvents(featureView);
@@ -157,6 +218,7 @@ function bindFeatureEvents() {
 function renderFeature(section) {
   currentSection = section;
   const isGuide = activeRole === 'guide';
+  const isReviewer = activeRole === 'reviewer';
 
   const features = {
     avances: {
@@ -170,19 +232,39 @@ function renderFeature(section) {
       body: isGuide ? renderGuideReviewAndDefense() : renderReviews(false)
     },
     defensa: {
-      title: isGuide ? 'Defensa y revisiones' : 'Estado de mi defensa',
+      title: isGuide
+        ? 'Defensa y revisiones'
+        : isReviewer
+          ? 'Evaluación de informe final'
+          : 'Estado de mi defensa',
       description: isGuide
         ? 'Revisa entregas y consulta los requisitos de defensa de cada memorista.'
-        : 'Consulta los requisitos y el estado de autorización de tu defensa.',
-      body: isGuide ? renderGuideReviewAndDefense() : renderDefense(false)
+        : isReviewer
+          ? 'Evalúa el documento final y emite la calificación para estudiantes aptos.'
+          : 'Consulta los requisitos y el estado de autorización de tu defensa.',
+      body: isGuide
+        ? renderGuideReviewAndDefense()
+        : isReviewer
+          ? renderCorreferenteView()
+          : renderDefense(false)
     }
   };
+
   const feature = features[section];
+  const roleBadgeText = isGuide ? 'Profesor Guía' : isReviewer ? 'Correferente' : 'Memorista';
+  const scenarioLabel = section === 'avances'
+    ? 'F-01 · Gestión de avances'
+    : section === 'revisiones'
+      ? 'F-01 · Gestión de avances'
+      : isReviewer
+        ? 'HU-08 · Evaluación de informe final'
+        : 'F-03 · Autorización de defensa';
+
   featureView.innerHTML = `${featureHeader(
-    section === 'avances' ? 'F-01 · Gestión de avances' : section === 'revisiones' ? 'F-01 · Gestión de avances' : 'F-03 · Autorización de defensa',
+    scenarioLabel,
     feature.title,
     feature.description,
-    isGuide ? 'Profesor Guía' : 'Memorista'
+    roleBadgeText
   )}<div class="scenario-content">${feature.body}</div>`;
   featureView.hidden = false;
   homeLayout.hidden = true;
@@ -211,7 +293,8 @@ function renderStudentDeliverySummary(deliveries = []) {
       <div class="delivery-row">
         <span class="delivery-type">PDF</span>
         <span class="delivery-info"><strong>${delivery.nombreArchivo}</strong><small>${formatDeliveryDate(delivery.fechaEntrega)} · ${formatBytes(delivery.tamanoBytes)}</small></span>
-        <span class="delivery-status ${String(delivery.estado).toLowerCase() === 'revisado' ? 'status-done' : 'status-review'}">${String(delivery.estado).toUpperCase()}</span>      </div>
+        <span class="delivery-status ${String(delivery.estado).toLowerCase() === 'revisado' ? 'status-done' : 'status-review'}">${String(delivery.estado).toUpperCase()}</span>
+      </div>
     `).join('')}
   `;
 }
@@ -281,33 +364,6 @@ function renderStudentActivity(activity = []) {
   `;
 }
 
-function renderGuideNotifications(pending = []) {
-  if (pending.length === 0) {
-    activityMeta.textContent = 'Pendientes de atención';
-    return `
-      <span class="empty-mark">+</span>
-      <strong>Sin entregas pendientes</strong>
-      <p>Cuando un memorista registre un avance, aparecerá aquí.</p>
-    `;
-  }
-
-  activityMeta.textContent = `${pending.length} ${pending.length === 1 ? 'pendiente' : 'pendientes'}`;
-  return `
-    <div class="activity-list">
-      ${pending.map((advance) => `
-        <article class="activity-item">
-          <span class="activity-icon">↑</span>
-          <div>
-            <strong>Nuevo avance de memorista</strong>
-            <p>${escapeHtml(advance.estudianteIdentificacion || advance.estudianteId)} · ${escapeHtml(advance.nombreArchivo)}</p>
-            <small>${escapeHtml(formatActivityDate(advance.fechaEntrega))}</small>
-          </div>
-        </article>
-      `).join('')}
-    </div>
-  `;
-}
-
 async function loadStudentActivity() {
   try {
     const user = getCurrentUser();
@@ -316,7 +372,7 @@ async function loadStudentActivity() {
 
     const activity = await get(`/api/actividad?estudianteId=${encodeURIComponent(estudianteId)}`);
     if (activeRole === 'student' && currentSection === 'inicio') {
-      activityContent.innerHTML = renderStudentActivity(activity);
+      if (activityContent) activityContent.innerHTML = renderStudentActivity(activity);
     }
   } catch (error) {
     console.error('No se pudo cargar la actividad del estudiante:', error);
@@ -393,8 +449,10 @@ function showHome() {
   homeLayout.hidden = false;
   workspace.classList.remove('feature-active');
   const profile = roleProfiles[activeRole];
-  workspaceTitle.textContent = profile.workspaceTitle;
-  workspaceNote.textContent = profile.workspaceNote;
+  if (profile) {
+    workspaceTitle.textContent = profile.workspaceTitle;
+    workspaceNote.textContent = profile.workspaceNote;
+  }
   setActiveNavigation('inicio');
 }
 
@@ -404,6 +462,7 @@ document.addEventListener('click', (event) => {
 
   const section = target.dataset.section;
   if (activeRole === 'guide' && section === 'avances') return;
+  if (activeRole === 'reviewer' && (section === 'avances' || section === 'revisiones')) return;
   if (section === 'inicio') showHome();
   else renderFeature(section);
 });
@@ -415,14 +474,15 @@ window.addEventListener('advance:created', () => {
 
 const currentUser = getCurrentUser();
 if (currentUser) {
-  activeRole = roleToView(currentUser.role);
+  activeRole = roleToView(currentUser.role ?? currentUser.rol);
   updateHomeRole(activeRole);
+  setActiveNavigation('inicio');
   loadGuidePendingCount();
 }
 
 document.addEventListener('auth:ready', (event) => {
-  activeRole = roleToView(event.detail.role);
+  activeRole = roleToView(event.detail.role ?? event.detail.rol);
   updateHomeRole(activeRole);
   showHome();
-  loadGuidePendingCount(); 
+  loadGuidePendingCount();
 });

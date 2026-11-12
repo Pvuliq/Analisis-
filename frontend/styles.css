@@ -829,6 +829,11 @@ h1 {
   align-items: start;
 }
 
+.review-only-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .compact-approval-panel {
   border-top: 4px solid var(--teal);
 }
@@ -1139,6 +1144,24 @@ textarea:focus {
 .requirement-list .requirement-pending span {
   color: var(--white);
   background: var(--coral);
+}
+
+.requirement-list .requirement-ok span {
+  color: var(--white);
+  background: var(--teal);
+}
+
+.requirement-list .requirement-ok strong {
+  color: var(--teal);
+}
+
+.requirement-list .requirement-rejected span {
+  color: var(--white);
+  background: #c0392b;
+}
+
+.requirement-list .requirement-rejected strong {
+  color: #c0392b;
 }
 
 .decision-tag {

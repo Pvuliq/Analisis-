@@ -104,13 +104,27 @@ const initializeSchema = async () => {
             id INT AUTO_INCREMENT PRIMARY KEY,
             estudianteId VARCHAR(20) NOT NULL,
             avanceId INT NOT NULL,
-            revisionId INT NOT NULL,
+            revisionId INT NULL,
+            evaluacionCorreferenteId INT NULL,
             estado VARCHAR(50) NOT NULL,
             fechaAutorizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_autorizacion_estudiante (estudianteId)
+            UNIQUE KEY uq_autorizacion_revision (avanceId, revisionId)
         )
     `);
     await ensureStudentIdentifierType('autorizaciones_defensa');
+    await ensureColumn('autorizaciones_defensa', 'evaluacionCorreferenteId', 'INT NULL');
+    await query('ALTER TABLE autorizaciones_defensa MODIFY COLUMN revisionId INT NULL');
+    await removeIndex('autorizaciones_defensa', 'uq_autorizacion_estudiante');
+    await ensureIndex(
+        'autorizaciones_defensa',
+        'uq_autorizacion_revision',
+        'UNIQUE KEY uq_autorizacion_revision (avanceId, revisionId)'
+    );
+    await ensureIndex(
+        'autorizaciones_defensa',
+        'uq_autorizacion_evaluacion',
+        'UNIQUE KEY uq_autorizacion_evaluacion (avanceId, evaluacionCorreferenteId)'
+    );
 
     await query(`
         CREATE TABLE IF NOT EXISTS notificaciones_defensa (
@@ -181,26 +195,45 @@ const getAdvanceId = (value) => {
     return Number.isInteger(avanceId) && avanceId > 0 ? avanceId : null;
 };
 
-const getDefenseSnapshot = async (estudianteId, executor = database) => {
+const getDefenseSnapshot = async (estudianteId, executor = database, requestedAdvanceId = null) => {
+    const advanceParams = [estudianteId];
+    const advanceCondition = requestedAdvanceId
+        ? 'a.estudianteId = ? AND a.avanceId = ?'
+        : 'a.estudianteId = ? AND a.esVersionFinal = 1';
+    if (requestedAdvanceId) advanceParams.push(requestedAdvanceId);
+
     const avances = await query(
-        `SELECT a.avanceId, a.esVersionFinal, r.id AS revisionId
+        `SELECT a.avanceId, a.esVersionFinal,
+                ec.id AS evaluacionCorreferenteId,
+                ec.nota AS notaCorreferente,
+                ec.acuerdoDefensa AS acuerdoDefensaCorreferente
          FROM avances a
-         LEFT JOIN revisiones r
-            ON r.avanceId = a.avanceId AND r.resultado = 'Avance suficiente'
-         WHERE a.estudianteId = ? AND a.esVersionFinal = 1
-         ORDER BY a.fechaEntrega DESC, r.fecha_revision DESC
+         LEFT JOIN evaluacion_correferente ec ON ec.avanceId = a.avanceId
+         WHERE ${advanceCondition}
+         ORDER BY a.fechaEntrega DESC, a.avanceId DESC
          LIMIT 1`,
-        [estudianteId],
+        advanceParams,
         executor
     );
-    const autorizaciones = await query(
-        `SELECT id, avanceId, revisionId, estado, fechaAutorizacion
-         FROM autorizaciones_defensa
-         WHERE estudianteId = ?`,
-        [estudianteId],
-        executor
+    const advance = avances[0];
+    const isFinalReport = Boolean(advance && Number(advance.esVersionFinal) === 1);
+    const hasCorreferenteEvaluation = Boolean(advance && advance.evaluacionCorreferenteId);
+    const correferenteApproved = Boolean(
+        isFinalReport
+        && hasCorreferenteEvaluation
+        && Number(advance.notaCorreferente) >= 70
+        && Number(advance.acuerdoDefensaCorreferente) === 1
     );
-    const authorization = autorizaciones[0];
+    const authorizationRows = correferenteApproved
+        ? await query(
+            `SELECT id, avanceId, evaluacionCorreferenteId, estado, fechaAutorizacion
+             FROM autorizaciones_defensa
+             WHERE estudianteId = ? AND avanceId = ? AND evaluacionCorreferenteId = ?`,
+            [estudianteId, advance.avanceId, advance.evaluacionCorreferenteId],
+            executor
+        )
+        : [];
+    const authorization = authorizationRows[0];
     const notifications = authorization
         ? await query(
             'SELECT COUNT(*) AS total FROM notificaciones_defensa WHERE autorizacionId = ?',
@@ -211,9 +244,22 @@ const getDefenseSnapshot = async (estudianteId, executor = database) => {
 
     return {
         estudianteId,
-        estado: authorization ? authorization.estado : 'En revisión final',
-        versionFinalRegistrada: avances.length > 0,
-        revisionFinalAprobada: avances.length > 0 && avances[0].revisionId !== null,
+        avanceId: advance ? advance.avanceId : null,
+        estado: authorization
+            ? authorization.estado
+            : !advance
+                ? 'En revisión final'
+                : !isFinalReport
+                    ? 'Documento no marcado como final'
+                : !hasCorreferenteEvaluation
+                    ? 'Pendiente de evaluación del correferente'
+                    : correferenteApproved
+                        ? 'Pendiente de visto bueno'
+                        : 'Requiere correcciones del correferente',
+        versionFinalRegistrada: isFinalReport,
+        evaluacionCorreferenteRegistrada: hasCorreferenteEvaluation,
+        evaluacionCorreferenteAprobada: correferenteApproved,
+        notaCorreferente: advance ? advance.notaCorreferente : null,
         autorizacionEmitida: Boolean(authorization),
         notificacionesRegistradas: notifications[0].total,
         fechaAutorizacion: authorization ? authorization.fechaAutorizacion : null
@@ -222,15 +268,35 @@ const getDefenseSnapshot = async (estudianteId, executor = database) => {
 
 const obtenerEstado = async (req, res) => {
     const estudianteId = getStudentId(req.params.estudianteId);
+    const requestedAdvanceId = req.query.avanceId === undefined
+        ? null
+        : getAdvanceId(req.query.avanceId);
     if (!estudianteId) {
         return res.status(400).json({ message: 'estudianteId debe ser un formato de RUT válido.' });
     }
+    if (req.query.avanceId !== undefined && !requestedAdvanceId) {
+        return res.status(400).json({ message: 'El identificador del documento no es válido.' });
+    }
 
     try {
-        return res.json(await getDefenseSnapshot(estudianteId));
+        return res.json(await getDefenseSnapshot(estudianteId, database, requestedAdvanceId));
     } catch (error) {
         console.error('No se pudo consultar el estado de defensa:', error);
         return res.status(500).json({ message: 'No se pudo consultar el estado de defensa.' });
+    }
+};
+
+const listarDocumentosDefensa = async (req, res) => {
+    try {
+        const rows = await query(`
+            SELECT a.avanceId, a.estudianteId, a.nombreArchivo, a.fechaEntrega, a.esVersionFinal
+            FROM avances a
+            ORDER BY a.fechaEntrega DESC, a.avanceId DESC
+        `);
+        return res.json(rows);
+    } catch (error) {
+        console.error('No se pudieron consultar los documentos para defensa:', error);
+        return res.status(500).json({ message: 'No se pudieron consultar los documentos para defensa.' });
     }
 };
 
@@ -251,8 +317,15 @@ const autorizarDefensa = async (req, res) => {
     }
 
     const estudianteId = getStudentId(req.params.estudianteId);
+    const body = req.body || {};
+    const requestedAdvanceId = body.avanceId === undefined
+        ? null
+        : getAdvanceId(body.avanceId);
     if (!estudianteId) {
         return res.status(400).json({ message: 'estudianteId debe ser un formato de RUT válido.' });
+    }
+    if (body.avanceId !== undefined && !requestedAdvanceId) {
+        return res.status(400).json({ message: 'El identificador del documento no es válido.' });
     }
 
     let connection;
@@ -263,16 +336,25 @@ const autorizarDefensa = async (req, res) => {
         await beginTransaction(connection);
         transactionStarted = true;
 
-        const avances = await query(
-            `SELECT avanceId
-             FROM avances
-             WHERE estudianteId = ? AND esVersionFinal = 1
-             ORDER BY fechaEntrega DESC
-             LIMIT 1
-             FOR UPDATE`,
-             [estudianteId],
-             connection
-        );
+        const avances = requestedAdvanceId
+            ? await query(
+                `SELECT avanceId, esVersionFinal
+                 FROM avances
+                 WHERE estudianteId = ? AND avanceId = ?
+                 FOR UPDATE`,
+                [estudianteId, requestedAdvanceId],
+                connection
+            )
+            : await query(
+                `SELECT avanceId, esVersionFinal
+                 FROM avances
+                 WHERE estudianteId = ? AND esVersionFinal = 1
+                 ORDER BY fechaEntrega DESC, avanceId DESC
+                 LIMIT 1
+                 FOR UPDATE`,
+                [estudianteId],
+                connection
+            );
 
         if (avances.length === 0) {
              await rollbackTransaction(connection);
@@ -283,27 +365,44 @@ const autorizarDefensa = async (req, res) => {
         }
 
         const avanceId = avances[0].avanceId;
-        const revisiones = await query(
-            `SELECT id
-             FROM revisiones
-             WHERE avanceId = ? AND resultado = 'Avance suficiente'
-             ORDER BY fecha_revision DESC
+        if (Number(avances[0].esVersionFinal) !== 1) {
+            await rollbackTransaction(connection);
+            transactionStarted = false;
+            return res.status(409).json({
+                message: 'No se puede autorizar la defensa: el documento seleccionado no está marcado como versión final.'
+            });
+        }
+        const evaluaciones = await query(
+            `SELECT id, nota, acuerdoDefensa
+             FROM evaluacion_correferente
+             WHERE avanceId = ?
              LIMIT 1`,
             [avanceId],
             connection
         );
 
-        if (revisiones.length === 0) {
+        const evaluacion = evaluaciones[0];
+        const correferenteApproved = Boolean(
+            evaluacion
+            && Number(evaluacion.nota) >= 70
+            && Number(evaluacion.acuerdoDefensa) === 1
+        );
+        if (!correferenteApproved) {
             await rollbackTransaction(connection);
             transactionStarted = false;
             return res.status(409).json({
-                message: 'No se puede autorizar la defensa: la versión final aún no tiene una revisión aprobada.'
+                message: !evaluacion
+                    ? 'No se puede autorizar la defensa: el correferente aún no ha evaluado la versión final.'
+                    : 'No se puede autorizar la defensa: la evaluación del correferente no está aprobada.'
             });
         }
 
         const existing = await query(
-            'SELECT id FROM autorizaciones_defensa WHERE estudianteId = ? FOR UPDATE',
-            [estudianteId],
+            `SELECT id
+             FROM autorizaciones_defensa
+             WHERE estudianteId = ? AND avanceId = ? AND evaluacionCorreferenteId = ?
+             FOR UPDATE`,
+            [estudianteId, avanceId, evaluacion.id],
             connection
         );
 
@@ -315,9 +414,9 @@ const autorizarDefensa = async (req, res) => {
         } else {
             const result = await query(
                 `INSERT INTO autorizaciones_defensa
-                    (estudianteId, avanceId, revisionId, estado)
-                 VALUES (?, ?, ?, 'Apto para defensa')`,
-                [estudianteId, avanceId, revisiones[0].id],
+                    (estudianteId, avanceId, revisionId, evaluacionCorreferenteId, estado)
+                 VALUES (?, ?, NULL, ?, 'Apto para defensa')`,
+                [estudianteId, avanceId, evaluacion.id],
                 connection
             );
             autorizacionId = result.insertId;
@@ -337,7 +436,7 @@ const autorizarDefensa = async (req, res) => {
             );
         }
 
-        const state = await getDefenseSnapshot(estudianteId, connection);
+        const state = await getDefenseSnapshot(estudianteId, connection, avanceId);
         await commitTransaction(connection);
         transactionCommitted = true;
         return res.status(statusCode).json(state);
@@ -553,6 +652,7 @@ const obtenerEvaluacionCorreferente = async (req, res) => {
 module.exports = {
     initializeSchema,
     obtenerEstado,
+    listarDocumentosDefensa,
     autorizarDefensa,
     obtenerNotificaciones,
     listarNotificacionesPorDestinatario,

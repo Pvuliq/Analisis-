@@ -1,6 +1,6 @@
 import { bindAdvanceEvents, renderGuideAdvances, renderStudentAdvances } from './avances.js';
 import { bindReviewEvents, renderReviews } from './revisiones.js';
-import { bindDefenseEvents, renderDefense, renderGuideReviewAndDefense } from './defensa.js';
+import { bindDefenseEvents, renderDefense, renderGuideReview } from './defensa.js';
 import { bindCorreferenteEvents, renderCorreferenteView } from './correferente.js';
 import { get } from './api.js';
 import { getCurrentUser, roleToView } from './auth.js';
@@ -227,23 +227,23 @@ function renderFeature(section) {
       body: isGuide ? renderGuideAdvances() : renderStudentAdvances()
     },
     revisiones: {
-      title: isGuide ? 'Revisiones y defensa' : 'Mis revisiones',
-      description: isGuide ? 'Evalúa el avance y verifica los requisitos de defensa de la misma memoria.' : 'Consulta las observaciones asociadas a tus documentos.',
-      body: isGuide ? renderGuideReviewAndDefense() : renderReviews(false)
+      title: isGuide ? 'Revisiones de avances' : 'Mis revisiones',
+      description: isGuide ? 'Revisa las entregas pendientes de los memoristas asignados.' : 'Consulta las observaciones asociadas a tus documentos.',
+      body: isGuide ? renderGuideReview() : renderReviews(false)
     },
     defensa: {
       title: isGuide
-        ? 'Defensa y revisiones'
+        ? 'Autorización de defensa'
         : isReviewer
           ? 'Evaluación de informe final'
           : 'Estado de mi defensa',
       description: isGuide
-        ? 'Revisa entregas y consulta los requisitos de defensa de cada memorista.'
+        ? 'Emite el visto bueno solo después de que el correferente apruebe el informe final.'
         : isReviewer
           ? 'Evalúa el documento final y emite la calificación para estudiantes aptos.'
           : 'Consulta los requisitos y el estado de autorización de tu defensa.',
       body: isGuide
-        ? renderGuideReviewAndDefense()
+        ? renderDefense(true)
         : isReviewer
           ? renderCorreferenteView()
           : renderDefense(false)

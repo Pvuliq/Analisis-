@@ -7,11 +7,9 @@ function activeStudentId() {
   return user?.estudianteId || user?.rut || '';
 }
 
-function renderApprovalPanel(compact = false) {
-  const panelClass = compact ? 'compact-approval-panel' : 'approval-panel';
-
+function renderApprovalPanel() {
   return `
-    <section class="interaction-panel ${panelClass}">
+    <section class="interaction-panel approval-panel">
       <div class="panel-topline"><span class="story-symbol">03</span><span>HU-07 · Defensa</span></div>
       <h4>Checklist para autorizar defensa</h4>
       <p>El sistema comprobará los requisitos de la memoria antes de registrar la autorización.</p>
@@ -20,7 +18,7 @@ function renderApprovalPanel(compact = false) {
           <span>01</span>Versión final del documento: <strong data-requirement-status>Consultando...</strong>
         </li>
         <li class="requirement-pending" data-requirement="review">
-          <span>02</span>Revisión de la versión final: <strong data-requirement-status>Consultando...</strong>
+          <span>02</span>Evaluación del correferente: <strong data-requirement-status>Consultando...</strong>
         </li>
         <li class="requirement-pending" data-requirement="authorization">
           <span>03</span>Visto bueno formal: <strong data-requirement-status>Pendiente</strong>
@@ -33,9 +31,9 @@ function renderApprovalPanel(compact = false) {
   `;
 }
 
-export function renderGuideReviewAndDefense() {
+export function renderGuideReview() {
   return `
-    <div class="combined-review-layout" data-defense-student-id="" data-review-mode="guide" data-review-student-id="">
+    <div class="review-only-layout" data-review-mode="guide" data-review-student-id="">
       <section class="interaction-panel review-panel">
         <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
         <div class="review-document"><span class="file-icon">PDF</span><div><strong id="selectedAdvanceName">Avance_memoria_v03.pdf</strong><small id="selectedAdvanceMeta">Entregado hoy · versión específica</small></div><span class="review-status" id="reviewTag">Pendiente</span><a class="action-button" id="downloadAdvanceButton" href="#" target="_blank" rel="noopener" style="display:none;">Abrir PDF</a><a id="selectedAdvanceLink" href="#" style="display:none;"></a></div>
@@ -65,7 +63,7 @@ export function renderGuideReviewAndDefense() {
         </div>
         <p class="decision-feedback" id="reviewFeedback">Indica si esta versión cumple con el estándar esperado.</p>
       </section>
-      ${renderApprovalPanel(true)}
+      </section>
     </div>
   `;
 }
@@ -121,13 +119,17 @@ export function renderDefense(isGuide) {
   if (isGuide) {
     return `
       <div class="scenario-grid" data-defense-student-id="">
+        <section class="interaction-panel">
+          <div class="panel-topline"><span class="story-symbol">03</span><span>HU-07 · Defensa</span></div>
+          <h4>Seleccionar documento</h4>
+          <p>Selecciona una entrega. El sistema solo autorizará documentos marcados como versión final.</p>
+          <label class="field-label" for="defenseStudentSelect">Documento de memoria</label>
+          <select id="defenseStudentSelect" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+            <option value="">Cargando documentos...</option>
+          </select>
+          <p class="decision-feedback" data-defense-selection-feedback role="status">Consultando documentos...</p>
+        </section>
         ${renderApprovalPanel()}
-        <aside class="evidence-panel">
-          <p class="section-label">Estado de la memoria</p>
-          <strong data-defense-state>Consultando...</strong>
-          <p>El estado se obtiene del proceso registrado en el servidor.</p>
-          <span class="decision-tag">F-03 · HU-07</span>
-        </aside>
       </div>
     `;
   }
@@ -144,7 +146,7 @@ export function renderDefense(isGuide) {
       <aside class="evidence-panel">
         <p class="section-label">Próximo paso</p>
         <strong>Estado de la defensa</strong>
-        <p>La autorización se mostrará cuando el Profesor Guía complete la revisión final.</p>
+        <p>La autorización se mostrará cuando el correferente apruebe el informe final y el Profesor Guía emita el visto bueno.</p>
       </aside>
     </div>
   `;
@@ -155,7 +157,8 @@ function validateDefenseState(data) {
     !data
     || typeof data.estado !== 'string'
     || typeof data.versionFinalRegistrada !== 'boolean'
-    || typeof data.revisionFinalAprobada !== 'boolean'
+    || typeof data.evaluacionCorreferenteRegistrada !== 'boolean'
+    || typeof data.evaluacionCorreferenteAprobada !== 'boolean'
     || typeof data.autorizacionEmitida !== 'boolean'
   ) {
     throw new Error('La respuesta del servidor no contiene el estado de defensa esperado.');
@@ -164,12 +167,13 @@ function validateDefenseState(data) {
   return data;
 }
 
-function updateRequirement(root, name, complete, completeText, pendingText) {
+function updateRequirement(root, name, complete, completeText, pendingText, rejected = false) {
   const item = root.querySelector(`[data-requirement="${name}"]`);
   if (!item) return;
 
   item.classList.toggle('requirement-ok', complete);
   item.classList.toggle('requirement-pending', !complete);
+  item.classList.toggle('requirement-rejected', rejected);
   const status = item.querySelector('[data-requirement-status]');
   if (status) status.textContent = complete ? completeText : pendingText;
 }
@@ -184,14 +188,21 @@ function displayDefenseState(root, state) {
     'final',
     state.versionFinalRegistrada,
     'Registrada',
-    'Pendiente'
+    state.avanceId ? 'No, marcado como no final' : 'Pendiente'
   );
   updateRequirement(
     root,
     'review',
-    state.revisionFinalAprobada,
+    state.evaluacionCorreferenteAprobada,
     'Aprobada',
-    'Pendiente'
+    !state.versionFinalRegistrada
+      ? 'No aplica (documento no final)'
+      : !state.evaluacionCorreferenteRegistrada
+        ? 'Pendiente'
+        : `No aprobada (nota: ${state.notaCorreferente})`,
+    state.versionFinalRegistrada
+      && state.evaluacionCorreferenteRegistrada
+      && !state.evaluacionCorreferenteAprobada
   );
   updateRequirement(
     root,
@@ -205,7 +216,7 @@ function displayDefenseState(root, state) {
   if (action) {
     action.disabled = state.autorizacionEmitida
       || !state.versionFinalRegistrada
-      || !state.revisionFinalAprobada;
+      || !state.evaluacionCorreferenteAprobada;
     action.textContent = state.autorizacionEmitida
       ? 'Visto bueno emitido'
       : 'Emitir visto bueno';
@@ -213,11 +224,45 @@ function displayDefenseState(root, state) {
   }
 }
 
+function displayNoDefenseStudent(root, message) {
+  root.dataset.defenseStudentId = '';
+  root.querySelectorAll('[data-defense-state]').forEach((element) => {
+    element.textContent = 'Sin documento seleccionado';
+  });
+  ['final', 'review', 'authorization'].forEach((name) => {
+    const item = root.querySelector(`[data-requirement="${name}"]`);
+    if (!item) return;
+    item.classList.remove('requirement-ok');
+    item.classList.remove('requirement-rejected');
+    item.classList.add('requirement-pending');
+    const status = item.querySelector('[data-requirement-status]');
+    if (status) status.textContent = 'Sin datos';
+  });
+  const action = root.querySelector('[data-approval-action]');
+  if (action) action.disabled = true;
+  const selectionFeedback = root.querySelector('[data-defense-selection-feedback]');
+  if (selectionFeedback) {
+    selectionFeedback.style.color = 'var(--muted)';
+    selectionFeedback.textContent = message;
+  }
+  const feedback = getDefenseFeedback(root);
+  if (feedback) {
+    feedback.style.color = 'var(--muted)';
+    feedback.textContent = message;
+  }
+}
+
+function getDefenseFeedback(root) {
+  return root.querySelector('.approval-panel [data-defense-feedback]')
+    || root.querySelector('[data-defense-feedback]');
+}
+
 function getStudentId(root) {
-  const selectedOption = root.querySelector('#reviewAdvance option:checked');
-  const id = selectedOption?.dataset.studentId
-    || root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId
-    || activeStudentId();
+  const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+  const selectedOption = defenseStudentSelect?.selectedOptions[0];
+  const id = defenseStudentSelect
+    ? selectedOption?.dataset.studentId
+    : root.querySelector('[data-defense-student-id]')?.dataset.defenseStudentId || activeStudentId();
   if (!/^\d{8,9}-[\dKk]$/.test(id)) {
     throw new Error('No se pudo determinar la memoria que se está autorizando.');
   }
@@ -225,15 +270,30 @@ function getStudentId(root) {
   return id;
 }
 
-async function loadDefenseState(root, studentId) {
-  const feedback = root.querySelector('[data-defense-feedback]');
+function getSelectedAdvanceId(root) {
+  const value = root.querySelector('#defenseStudentSelect')?.value;
+  const advanceId = Number(value);
+  return Number.isInteger(advanceId) && advanceId > 0 ? advanceId : null;
+}
+
+async function loadDefenseState(root, studentId, advanceId = null) {
+  const feedback = getDefenseFeedback(root);
   const action = root.querySelector('[data-approval-action]');
   if (action) action.disabled = true;
+  if (feedback) {
+    feedback.style.color = 'var(--muted)';
+    feedback.textContent = 'Consultando los requisitos en el servidor...';
+  }
 
   try {
     const state = validateDefenseState(
-      await get(`${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}`)
+      await get(
+        `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}`
+        + (advanceId ? `?avanceId=${encodeURIComponent(advanceId)}` : '')
+      )
     );
+    const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+    if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
     displayDefenseState(root, state);
 
     if (feedback) {
@@ -241,20 +301,25 @@ async function loadDefenseState(root, studentId) {
       if (state.autorizacionEmitida) {
         feedback.textContent = 'La autorización está registrada.';
       } else if (!state.versionFinalRegistrada) {
-        feedback.textContent = 'Aún no se ha registrado la versión final del documento.';
-      } else if (!state.revisionFinalAprobada) {
-        feedback.textContent = 'La revisión de la versión final aún no está aprobada.';
+        feedback.textContent = 'El documento seleccionado no está marcado como versión final. No se puede emitir el visto bueno.';
+      } else if (!state.evaluacionCorreferenteRegistrada) {
+        feedback.textContent = 'El correferente aún no ha evaluado la versión final.';
+      } else if (!state.evaluacionCorreferenteAprobada) {
+        feedback.textContent = `La evaluación del correferente no está aprobada (nota: ${state.notaCorreferente}).`;
       } else {
-        feedback.textContent = 'Los requisitos están cumplidos. El Profesor Guía puede emitir el visto bueno.';
+        feedback.textContent = 'El correferente aprobó el informe. El Profesor Guía puede emitir el visto bueno.';
       }
     }
   } catch (error) {
+    const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+    if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
     root.querySelectorAll('[data-defense-state]').forEach((element) => {
       element.textContent = 'No disponible';
     });
-    if (feedback) {
-      feedback.style.color = '#c0392b';
-      feedback.textContent = `No se pudo consultar el estado de defensa: ${error.message}`;
+    const defenseFeedback = getDefenseFeedback(root);
+    if (defenseFeedback) {
+      defenseFeedback.style.color = '#c0392b';
+      defenseFeedback.textContent = `No se pudo consultar el estado de defensa: ${error.message}`;
     }
   }
 }
@@ -391,34 +456,87 @@ export function bindDefenseEvents(root = document) {
   const panel = root.querySelector('[data-defense-student-id]');
   if (!panel) return;
 
-  let studentId;
-  try {
-    studentId = getStudentId(root);
-  } catch (error) {
-    const feedback = root.querySelector('[data-defense-feedback]');
-    if (feedback) {
-      feedback.style.color = '#c0392b';
-      feedback.textContent = error.message;
+  const defenseStudentSelect = root.querySelector('#defenseStudentSelect');
+  let initialStudentId;
+  if (defenseStudentSelect) {
+    displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+  } else {
+    try {
+      initialStudentId = getStudentId(root);
+    } catch (error) {
+      const feedback = root.querySelector('[data-defense-feedback]');
+      if (feedback) {
+        feedback.style.color = '#c0392b';
+        feedback.textContent = error.message;
+      }
+      return;
     }
-    return;
   }
 
-  root.addEventListener('advance:selected', (event) => {
-    if (!event.detail?.estudianteId) return;
-    loadDefenseState(root, event.detail.estudianteId);
-  });
+  if (initialStudentId) loadDefenseState(root, initialStudentId);
 
-  loadDefenseState(root, studentId);
+  if (defenseStudentSelect) {
+    get(`${DEFENSE_API_PATH}/documentos`)
+      .then((reports) => {
+        if (!Array.isArray(reports)) {
+          throw new Error('El servidor devolvió una lista de documentos inválida.');
+        }
+
+        defenseStudentSelect.replaceChildren(new Option('Selecciona un documento', ''));
+        reports.forEach((report) => {
+          const option = new Option(
+            `${report.estudianteId} · ${report.nombreArchivo} · ${Number(report.esVersionFinal) === 1 ? 'Versión final' : 'No final'}`,
+            report.avanceId
+          );
+          option.dataset.studentId = report.estudianteId;
+          option.dataset.esVersionFinal = String(Number(report.esVersionFinal) === 1);
+          defenseStudentSelect.add(option);
+        });
+
+        if (reports.length === 0) {
+          defenseStudentSelect.replaceChildren(new Option('No hay documentos registrados', ''));
+          displayNoDefenseStudent(root, 'No hay documentos registrados para revisar.');
+        } else {
+          displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+        }
+      })
+      .catch((error) => {
+        defenseStudentSelect.replaceChildren(new Option('No se pudieron cargar los documentos', ''));
+        displayNoDefenseStudent(root, `No se pudieron cargar los documentos: ${error.message}`);
+        const selectionFeedback = root.querySelector('[data-defense-selection-feedback]');
+        if (selectionFeedback) selectionFeedback.style.color = '#c0392b';
+      });
+
+    defenseStudentSelect.addEventListener('change', () => {
+      if (!defenseStudentSelect.value) {
+        displayNoDefenseStudent(root, 'Selecciona un documento para consultar los requisitos.');
+        return;
+      }
+      const studentId = getStudentId(root);
+      const advanceId = getSelectedAdvanceId(root);
+      root.dataset.defenseStudentId = studentId;
+      loadDefenseState(root, studentId, advanceId);
+    });
+  }
 
   const action = root.querySelector('[data-approval-action]');
   if (!action) return;
 
-  root.addEventListener('review:created', (event) => {
-    if (event.detail.avanceId) loadDefenseState(root, studentId);
-  });
-
   action.addEventListener('click', async () => {
-    const feedback = root.querySelector('[data-defense-feedback]');
+    const feedback = getDefenseFeedback(root);
+    let studentId;
+    let advanceId;
+    try {
+      studentId = getStudentId(root);
+      advanceId = getSelectedAdvanceId(root);
+    } catch (error) {
+      if (feedback) {
+        feedback.style.color = '#c0392b';
+        feedback.textContent = error.message;
+      }
+      return;
+    }
+
     action.disabled = true;
     action.textContent = 'Enviando autorización...';
     if (feedback) {
@@ -430,10 +548,11 @@ export function bindDefenseEvents(root = document) {
       const state = validateDefenseState(
         await post(
           `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}/autorizacion`,
-          {},
+          { avanceId: advanceId },
           { headers: { 'Content-Type': 'application/json', 'x-role': 'guide' } }
         )
       );
+      if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
       displayDefenseState(root, state);
 
       if (feedback) {
@@ -449,7 +568,8 @@ export function bindDefenseEvents(root = document) {
         }
       }
     } catch (error) {
-      await loadDefenseState(root, studentId);
+      if (defenseStudentSelect && Number(defenseStudentSelect.value) !== advanceId) return;
+      await loadDefenseState(root, studentId, advanceId);
       if (feedback) {
         feedback.style.color = '#c0392b';
         feedback.textContent = `No se pudo emitir el visto bueno: ${error.message}`;

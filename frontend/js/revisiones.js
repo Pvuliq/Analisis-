@@ -43,7 +43,7 @@ function renderAdvanceSelector() {
 export function renderReviews(isGuide) {
   if (isGuide) {
     return `
-      <div class="scenario-grid">
+      <div class="scenario-grid" data-review-mode="guide">
         <section class="interaction-panel review-panel">
           <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
           <a class="review-document" id="selectedAdvanceLink" href="#" target="_blank" rel="noopener">
@@ -163,21 +163,65 @@ export function bindReviewEvents(root = document) {
           return;
         }
 
-        reviewAdvance.replaceChildren(...advances.map((advance) => {
-          const option = document.createElement('option');
-          option.value = advance.avanceId;
-          option.dataset.studentId = advance.estudianteId;
-          option.dataset.fileName = advance.nombreArchivo;
-          const student = advance.estudianteIdentificacion
-            ? ` · Estudiante: ${advance.estudianteIdentificacion}`
-            : '';
-          option.textContent = `${advance.nombreArchivo}${student}${advance.esVersionFinal ? ' · Versión final' : ''}`;
-          return option;
-        }));
+        if (reviewStudent) {
+          const estudiantesUnicos = [];
+          const idsVistos = new Set();
+          
+          advances.forEach(adv => {
+            if (!idsVistos.has(adv.estudianteId)) {
+              idsVistos.add(adv.estudianteId);
+              estudiantesUnicos.push({
+                id: adv.estudianteId,
+                nombre: adv.estudianteIdentificacion || `ID: ${adv.estudianteId}`
+              });
+            }
+          });
+
+          reviewStudent.replaceChildren(...estudiantesUnicos.map(estudiante => {
+            const option = document.createElement('option');
+            option.value = estudiante.id;
+            option.textContent = estudiante.nombre;
+            return option;
+          }));
+
+          const actualizarAvances = () => {
+            const estudianteSeleccionado = reviewStudent.value;
+            const avancesFiltrados = advances.filter(adv => String(adv.estudianteId) === String(estudianteSeleccionado));
+            
+            reviewAdvance.replaceChildren(...avancesFiltrados.map((advance) => {
+              const option = document.createElement('option');
+              option.value = advance.avanceId;
+              option.dataset.studentId = advance.estudianteId;
+              option.dataset.fileName = advance.nombreArchivo;
+              option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+              return option;
+            }));
+
+            if (reviewAdvance.options.length > 0) {
+              updateSelectedAdvance(root, reviewAdvance.options[0]);
+            } else {
+              reviewAdvance.innerHTML = '<option value="">Sin avances</option>';
+            }
+          };
+
+          reviewStudent.addEventListener('change', actualizarAvances);
+          actualizarAvances();
+
+        } else {
+          reviewAdvance.replaceChildren(...advances.map((advance) => {
+            const option = document.createElement('option');
+            option.value = advance.avanceId;
+            option.dataset.studentId = advance.estudianteId;
+            option.dataset.fileName = advance.nombreArchivo;
+            option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+            return option;
+          }));
+          updateSelectedAdvance(root, reviewAdvance.options[0]);
+        }
+
         if (reviewAdvanceStatus) {
           reviewAdvanceStatus.textContent = 'La revisión quedará asociada a la versión seleccionada.';
         }
-        updateSelectedAdvance(root, reviewAdvance.options[0]);
       })
       .catch((error) => {
         reviewAdvance.innerHTML = '<option value="">No se pudieron cargar los avances</option>';

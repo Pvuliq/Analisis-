@@ -19,8 +19,7 @@ const quickCount = document.querySelector('#quickCount');
 const quickContent = document.querySelector('#quickContent');
 const activityLabel = document.querySelector('#activityLabel');
 const activityMeta = document.querySelector('#activityMeta');
-const activityTitle = document.querySelector('#activityTitle');
-const activityDescription = document.querySelector('#activityDescription');
+const activityContent = document.querySelector('#activityContent');
 const nextLabel = document.querySelector('#nextLabel');
 const nextTitle = document.querySelector('#nextTitle');
 const nextDescription = document.querySelector('#nextDescription');
@@ -105,20 +104,19 @@ const sectionMessages = {
 async function loadGuidePendingCount() {
   try {
     if (activeRole !== 'guide') return;
-    
+
     const pending = await get('/api/revisiones/pendientes');
-    
-    if (Array.isArray(pending)) {
-      const count = pending.length;
-      
-      if (statusBadge) {
-        statusBadge.textContent = count === 1 ? '1 REVISIÓN PENDIENTE' : `${count} REVISIONES PENDIENTES`;
-      }
-      
-      if (activityTitle && currentSection === 'inicio') {
-        activityTitle.textContent = count === 1 ? '1 entrega espera revisión' : `${count} entregas esperan revisión`;
-      }
+    if (!Array.isArray(pending)) {
+      throw new Error('El servidor devolvió una lista de entregas inválida.');
     }
+
+    const count = pending.length;
+    if (statusBadge) {
+      statusBadge.textContent = count === 0
+        ? 'Sin revisiones pendientes'
+        : count === 1 ? '1 revisión pendiente' : `${count} revisiones pendientes`;
+    }
+
   } catch (error) {
     console.error('Error al cargar la cantidad de pendientes:', error);
     if (statusBadge) statusBadge.textContent = 'Error de conexión';
@@ -146,6 +144,7 @@ function updateHomeRole(role) {
 
   if (role === 'guide') {
     quickContent.innerHTML = renderGuideQuickLinks();
+    loadGuideActivity();
   } else if (role === 'reviewer') {
     quickContent.innerHTML = `
       <p style="color: var(--muted); margin: 8px 0 16px 0; font-size: 14px;">
@@ -160,19 +159,20 @@ function updateHomeRole(role) {
 
   activityLabel.textContent = profile.activityLabel;
   activityMeta.textContent = profile.activityMeta;
-  activityTitle.textContent = profile.activityTitle;
-  activityDescription.textContent = profile.activityDescription;
-  nextLabel.textContent = profile.nextLabel;
-  nextTitle.textContent = profile.nextTitle;
-  nextDescription.textContent = profile.nextDescription;
-  primaryButton.textContent = profile.primary;
+  activityContent.innerHTML = `
+    <span class="empty-mark">+</span>
+    <strong>${escapeHtml(profile.activityTitle)}</strong>
+    <p>${escapeHtml(profile.activityDescription)}</p>
+  `;
+  if (nextLabel) nextLabel.textContent = profile.nextLabel;
+  if (nextTitle) nextTitle.textContent = profile.nextTitle;
+  if (nextDescription) nextDescription.textContent = profile.nextDescription;
+  if (primaryButton) primaryButton.textContent = profile.primary;
 
-  if (role === 'guide') {
-    primaryButton.dataset.section = 'revisiones';
-  } else if (role === 'reviewer') {
-    primaryButton.dataset.section = 'defensa';
-  } else {
-    primaryButton.dataset.section = 'avances';
+  if (primaryButton) {
+    primaryButton.dataset.section = role === 'guide'
+      ? 'revisiones'
+      : role === 'reviewer' ? 'defensa' : 'avances';
   }
   setActiveNavigation(currentSection);
 }
@@ -238,7 +238,7 @@ function renderFeature(section) {
           ? 'Evaluación de informe final'
           : 'Estado de mi defensa',
       description: isGuide
-        ? 'Comprueba los requisitos y emite el visto bueno para la versión final revisada.'
+        ? 'Emite el visto bueno solo después de que el correferente apruebe el informe final.'
         : isReviewer
           ? 'Evalúa el documento final y emite la calificación para estudiantes aptos.'
           : 'Consulta los requisitos y el estado de autorización de tu defensa.',
@@ -372,11 +372,52 @@ async function loadStudentActivity() {
 
     const activity = await get(`/api/actividad?estudianteId=${encodeURIComponent(estudianteId)}`);
     if (activeRole === 'student' && currentSection === 'inicio') {
-      const container = document.querySelector('#activityContent');
-      if (container) container.innerHTML = renderStudentActivity(activity);
+      if (activityContent) activityContent.innerHTML = renderStudentActivity(activity);
     }
   } catch (error) {
     console.error('No se pudo cargar la actividad del estudiante:', error);
+  }
+}
+
+function renderGuideActivity(activity = []) {
+  if (activity.length === 0) {
+    activityMeta.textContent = 'Últimos movimientos';
+    return `
+      <span class="empty-mark">+</span>
+      <strong>Aún no hay actividad</strong>
+      <p>Las entregas de tus memoristas aparecerán aquí.</p>
+    `;
+  }
+
+  activityMeta.textContent = `${activity.length} ${activity.length === 1 ? 'entrega' : 'entregas'}`;
+  return `
+    <div class="activity-list">
+      ${activity.map((item) => `
+        <article class="activity-item">
+          <span class="activity-icon">↑</span>
+          <div>
+            <strong>Nuevo avance recibido</strong>
+            <p>${escapeHtml(`El estudiante ${item.estudianteId} entregó ${item.nombreArchivo}.`)}</p>
+            <small>${escapeHtml(formatActivityDate(item.fecha))}</small>
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function loadGuideActivity() {
+  try {
+    const user = getCurrentUser();
+    const profesorGuiaId = user?.rolUniversitario;
+    if (!profesorGuiaId || activeRole !== 'guide') return;
+
+    const activity = await get(`/api/actividad/profesor?profesorGuiaId=${encodeURIComponent(profesorGuiaId)}`);
+    if (activeRole === 'guide' && currentSection === 'inicio') {
+      document.querySelector('#activityContent').innerHTML = renderGuideActivity(activity);
+    }
+  } catch (error) {
+    console.error('No se pudo cargar la actividad del profesor:', error);
   }
 }
 
@@ -436,10 +477,12 @@ if (currentUser) {
   activeRole = roleToView(currentUser.role ?? currentUser.rol);
   updateHomeRole(activeRole);
   setActiveNavigation('inicio');
+  loadGuidePendingCount();
 }
 
 document.addEventListener('auth:ready', (event) => {
   activeRole = roleToView(event.detail.role ?? event.detail.rol);
   updateHomeRole(activeRole);
   showHome();
+  loadGuidePendingCount();
 });

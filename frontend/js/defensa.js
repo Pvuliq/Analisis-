@@ -18,7 +18,7 @@ function renderApprovalPanel() {
           <span>01</span>Versión final del documento: <strong data-requirement-status>Consultando...</strong>
         </li>
         <li class="requirement-pending" data-requirement="review">
-          <span>02</span>Revisión de la versión final: <strong data-requirement-status>Consultando...</strong>
+          <span>02</span>Evaluación del correferente: <strong data-requirement-status>Consultando...</strong>
         </li>
         <li class="requirement-pending" data-requirement="authorization">
           <span>03</span>Visto bueno formal: <strong data-requirement-status>Pendiente</strong>
@@ -146,7 +146,7 @@ export function renderDefense(isGuide) {
       <aside class="evidence-panel">
         <p class="section-label">Próximo paso</p>
         <strong>Estado de la defensa</strong>
-        <p>La autorización se mostrará cuando el Profesor Guía complete la revisión final.</p>
+        <p>La autorización se mostrará cuando el correferente apruebe el informe final y el Profesor Guía emita el visto bueno.</p>
       </aside>
     </div>
   `;
@@ -157,7 +157,8 @@ function validateDefenseState(data) {
     !data
     || typeof data.estado !== 'string'
     || typeof data.versionFinalRegistrada !== 'boolean'
-    || typeof data.revisionFinalAprobada !== 'boolean'
+    || typeof data.evaluacionCorreferenteRegistrada !== 'boolean'
+    || typeof data.evaluacionCorreferenteAprobada !== 'boolean'
     || typeof data.autorizacionEmitida !== 'boolean'
   ) {
     throw new Error('La respuesta del servidor no contiene el estado de defensa esperado.');
@@ -192,12 +193,16 @@ function displayDefenseState(root, state) {
   updateRequirement(
     root,
     'review',
-    state.revisionFinalAprobada,
+    state.evaluacionCorreferenteAprobada,
     'Aprobada',
     !state.versionFinalRegistrada
       ? 'No aplica (documento no final)'
-      : state.revisionFinalResultado === 'Necesita correcciones' ? 'Reprobada' : 'Pendiente',
-    state.versionFinalRegistrada && state.revisionFinalResultado === 'Necesita correcciones'
+      : !state.evaluacionCorreferenteRegistrada
+        ? 'Pendiente'
+        : `No aprobada (nota: ${state.notaCorreferente})`,
+    state.versionFinalRegistrada
+      && state.evaluacionCorreferenteRegistrada
+      && !state.evaluacionCorreferenteAprobada
   );
   updateRequirement(
     root,
@@ -210,7 +215,8 @@ function displayDefenseState(root, state) {
   const action = root.querySelector('[data-approval-action]');
   if (action) {
     action.disabled = state.autorizacionEmitida
-      || (state.versionFinalRegistrada && !state.revisionFinalAprobada);
+      || !state.versionFinalRegistrada
+      || !state.evaluacionCorreferenteAprobada;
     action.textContent = state.autorizacionEmitida
       ? 'Visto bueno emitido'
       : 'Emitir visto bueno';
@@ -296,12 +302,12 @@ async function loadDefenseState(root, studentId, advanceId = null) {
         feedback.textContent = 'La autorización está registrada.';
       } else if (!state.versionFinalRegistrada) {
         feedback.textContent = 'El documento seleccionado no está marcado como versión final. No se puede emitir el visto bueno.';
-      } else if (!state.revisionFinalAprobada) {
-        feedback.textContent = state.revisionFinalResultado === 'Necesita correcciones'
-          ? 'La revisión más reciente de la versión final requiere correcciones.'
-          : 'La revisión de la versión final aún no está aprobada.';
+      } else if (!state.evaluacionCorreferenteRegistrada) {
+        feedback.textContent = 'El correferente aún no ha evaluado la versión final.';
+      } else if (!state.evaluacionCorreferenteAprobada) {
+        feedback.textContent = `La evaluación del correferente no está aprobada (nota: ${state.notaCorreferente}).`;
       } else {
-        feedback.textContent = 'Los requisitos están cumplidos. El Profesor Guía puede emitir el visto bueno.';
+        feedback.textContent = 'El correferente aprobó el informe. El Profesor Guía puede emitir el visto bueno.';
       }
     }
   } catch (error) {
@@ -542,7 +548,7 @@ export function bindDefenseEvents(root = document) {
       const state = validateDefenseState(
         await post(
           `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}/autorizacion`,
-          { avanceId },
+          { avanceId: advanceId },
           { headers: { 'Content-Type': 'application/json', 'x-role': 'guide' } }
         )
       );

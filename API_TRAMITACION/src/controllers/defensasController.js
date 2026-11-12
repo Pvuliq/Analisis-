@@ -104,18 +104,26 @@ const initializeSchema = async () => {
             id INT AUTO_INCREMENT PRIMARY KEY,
             estudianteId VARCHAR(20) NOT NULL,
             avanceId INT NOT NULL,
-            revisionId INT NOT NULL,
+            revisionId INT NULL,
+            evaluacionCorreferenteId INT NULL,
             estado VARCHAR(50) NOT NULL,
             fechaAutorizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_autorizacion_revision (avanceId, revisionId)
         )
     `);
     await ensureStudentIdentifierType('autorizaciones_defensa');
+    await ensureColumn('autorizaciones_defensa', 'evaluacionCorreferenteId', 'INT NULL');
+    await query('ALTER TABLE autorizaciones_defensa MODIFY COLUMN revisionId INT NULL');
     await removeIndex('autorizaciones_defensa', 'uq_autorizacion_estudiante');
     await ensureIndex(
         'autorizaciones_defensa',
         'uq_autorizacion_revision',
         'UNIQUE KEY uq_autorizacion_revision (avanceId, revisionId)'
+    );
+    await ensureIndex(
+        'autorizaciones_defensa',
+        'uq_autorizacion_evaluacion',
+        'UNIQUE KEY uq_autorizacion_evaluacion (avanceId, evaluacionCorreferenteId)'
     );
 
     await query(`
@@ -195,16 +203,12 @@ const getDefenseSnapshot = async (estudianteId, executor = database, requestedAd
     if (requestedAdvanceId) advanceParams.push(requestedAdvanceId);
 
     const avances = await query(
-        `SELECT a.avanceId, a.esVersionFinal, r.id AS revisionId, r.resultado AS revisionResultado
+        `SELECT a.avanceId, a.esVersionFinal,
+                ec.id AS evaluacionCorreferenteId,
+                ec.nota AS notaCorreferente,
+                ec.acuerdoDefensa AS acuerdoDefensaCorreferente
          FROM avances a
-         LEFT JOIN revisiones r
-            ON r.id = (
-                SELECT r2.id
-                FROM revisiones r2
-                WHERE r2.avanceId = a.avanceId
-                ORDER BY r2.fecha_revision DESC, r2.id DESC
-                LIMIT 1
-            )
+         LEFT JOIN evaluacion_correferente ec ON ec.avanceId = a.avanceId
          WHERE ${advanceCondition}
          ORDER BY a.fechaEntrega DESC, a.avanceId DESC
          LIMIT 1`,
@@ -213,12 +217,19 @@ const getDefenseSnapshot = async (estudianteId, executor = database, requestedAd
     );
     const advance = avances[0];
     const isFinalReport = Boolean(advance && Number(advance.esVersionFinal) === 1);
-    const authorizationRows = isFinalReport && advance.revisionResultado === 'Avance suficiente'
+    const hasCorreferenteEvaluation = Boolean(advance && advance.evaluacionCorreferenteId);
+    const correferenteApproved = Boolean(
+        isFinalReport
+        && hasCorreferenteEvaluation
+        && Number(advance.notaCorreferente) >= 70
+        && Number(advance.acuerdoDefensaCorreferente) === 1
+    );
+    const authorizationRows = correferenteApproved
         ? await query(
-            `SELECT id, avanceId, revisionId, estado, fechaAutorizacion
+            `SELECT id, avanceId, evaluacionCorreferenteId, estado, fechaAutorizacion
              FROM autorizaciones_defensa
-             WHERE estudianteId = ? AND avanceId = ? AND revisionId = ?`,
-            [estudianteId, advance.avanceId, advance.revisionId],
+             WHERE estudianteId = ? AND avanceId = ? AND evaluacionCorreferenteId = ?`,
+            [estudianteId, advance.avanceId, advance.evaluacionCorreferenteId],
             executor
         )
         : [];
@@ -240,14 +251,15 @@ const getDefenseSnapshot = async (estudianteId, executor = database, requestedAd
                 ? 'En revisión final'
                 : !isFinalReport
                     ? 'Documento no marcado como final'
-                : !advance.revisionId
-                    ? 'Pendiente de revisión'
-                    : advance.revisionResultado === 'Avance suficiente'
+                : !hasCorreferenteEvaluation
+                    ? 'Pendiente de evaluación del correferente'
+                    : correferenteApproved
                         ? 'Pendiente de visto bueno'
-                        : 'Necesita correcciones',
+                        : 'Requiere correcciones del correferente',
         versionFinalRegistrada: isFinalReport,
-        revisionFinalAprobada: Boolean(isFinalReport && advance.revisionResultado === 'Avance suficiente'),
-        revisionFinalResultado: advance ? advance.revisionResultado : null,
+        evaluacionCorreferenteRegistrada: hasCorreferenteEvaluation,
+        evaluacionCorreferenteAprobada: correferenteApproved,
+        notaCorreferente: advance ? advance.notaCorreferente : null,
         autorizacionEmitida: Boolean(authorization),
         notificacionesRegistradas: notifications[0].total,
         fechaAutorizacion: authorization ? authorization.fechaAutorizacion : null
@@ -360,32 +372,37 @@ const autorizarDefensa = async (req, res) => {
                 message: 'No se puede autorizar la defensa: el documento seleccionado no está marcado como versión final.'
             });
         }
-        const revisiones = await query(
-            `SELECT id, resultado
-             FROM revisiones
+        const evaluaciones = await query(
+            `SELECT id, nota, acuerdoDefensa
+             FROM evaluacion_correferente
              WHERE avanceId = ?
-             ORDER BY fecha_revision DESC, id DESC
              LIMIT 1`,
             [avanceId],
             connection
         );
 
-        if (revisiones.length === 0 || revisiones[0].resultado !== 'Avance suficiente') {
+        const evaluacion = evaluaciones[0];
+        const correferenteApproved = Boolean(
+            evaluacion
+            && Number(evaluacion.nota) >= 70
+            && Number(evaluacion.acuerdoDefensa) === 1
+        );
+        if (!correferenteApproved) {
             await rollbackTransaction(connection);
             transactionStarted = false;
             return res.status(409).json({
-                message: revisiones.length === 0
-                    ? 'No se puede autorizar la defensa: la versión final aún no tiene una revisión.'
-                    : 'No se puede autorizar la defensa: la revisión más reciente de la versión final requiere correcciones.'
+                message: !evaluacion
+                    ? 'No se puede autorizar la defensa: el correferente aún no ha evaluado la versión final.'
+                    : 'No se puede autorizar la defensa: la evaluación del correferente no está aprobada.'
             });
         }
 
         const existing = await query(
             `SELECT id
              FROM autorizaciones_defensa
-             WHERE estudianteId = ? AND avanceId = ? AND revisionId = ?
+             WHERE estudianteId = ? AND avanceId = ? AND evaluacionCorreferenteId = ?
              FOR UPDATE`,
-            [estudianteId, avanceId, revisiones[0].id],
+            [estudianteId, avanceId, evaluacion.id],
             connection
         );
 
@@ -397,9 +414,9 @@ const autorizarDefensa = async (req, res) => {
         } else {
             const result = await query(
                 `INSERT INTO autorizaciones_defensa
-                    (estudianteId, avanceId, revisionId, estado)
-                 VALUES (?, ?, ?, 'Apto para defensa')`,
-                [estudianteId, avanceId, revisiones[0].id],
+                    (estudianteId, avanceId, revisionId, evaluacionCorreferenteId, estado)
+                 VALUES (?, ?, NULL, ?, 'Apto para defensa')`,
+                [estudianteId, avanceId, evaluacion.id],
                 connection
             );
             autorizacionId = result.insertId;

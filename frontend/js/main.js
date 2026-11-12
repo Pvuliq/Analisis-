@@ -238,7 +238,7 @@ function renderFeature(section) {
           ? 'Evaluación de informe final'
           : 'Estado de mi defensa',
       description: isGuide
-        ? 'Comprueba los requisitos y emite el visto bueno para la versión final revisada.'
+        ? 'Emite el visto bueno solo después de que el correferente apruebe el informe final.'
         : isReviewer
           ? 'Evalúa el documento final y emite la calificación para estudiantes aptos.'
           : 'Consulta los requisitos y el estado de autorización de tu defensa.',

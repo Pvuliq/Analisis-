@@ -22,18 +22,28 @@ function updateSelectedAdvance(root, option) {
 
 function renderAdvanceSelector() {
   return `
-    <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
-    <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus">
-      <option value="">Cargando avances...</option>
-    </select>
-    <p class="decision-feedback" id="reviewAdvanceStatus" role="status">Consultando avances...</p>
+    <div style="display: flex; gap: 16px; margin: 16px 0;">
+      <div style="flex: 1;">
+        <label class="field-label" for="reviewStudent">Seleccionar memorista</label>
+        <select id="reviewStudent" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+          <option value="">Cargando memoristas...</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label class="field-label" for="reviewAdvance">Versión que se revisará</label>
+        <select id="reviewAdvance" aria-describedby="reviewAdvanceStatus" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; font-family: inherit; margin-top: 6px; font-size: 14px; color: var(--ink);">
+          <option value="">Cargando avances...</option>
+        </select>
+      </div>
+    </div>
+    <p class="decision-feedback" id="reviewAdvanceStatus" role="status" style="margin-top: -8px; margin-bottom: 16px;">Consultando avances...</p>
   `;
 }
 
 export function renderReviews(isGuide) {
   if (isGuide) {
     return `
-      <div class="scenario-grid">
+      <div class="scenario-grid" data-review-mode="guide">
         <section class="interaction-panel review-panel">
           <div class="panel-topline"><span class="story-symbol">02</span><span>HU-02 · Revisión docente</span></div>
           <a class="review-document" id="selectedAdvanceLink" href="#" target="_blank" rel="noopener">
@@ -144,34 +154,83 @@ export function bindReviewEvents(root = document) {
           throw new Error('El servidor devolvió una lista de avances inválida.');
         }
 
+        const reviewStudent = root.querySelector('#reviewStudent');
+
         if (advances.length === 0) {
+          if (reviewStudent) reviewStudent.innerHTML = '<option value="">No hay memoristas pendientes</option>';
           reviewAdvance.innerHTML = '<option value="">No hay avances para revisar</option>';
           if (reviewAdvanceStatus) reviewAdvanceStatus.textContent = 'Primero debe registrarse un avance.';
           return;
         }
 
-        reviewAdvance.replaceChildren(...advances.map((advance) => {
-          const option = document.createElement('option');
-          option.value = advance.avanceId;
-          option.dataset.studentId = advance.estudianteId;
-          option.dataset.fileName = advance.nombreArchivo;
-          const student = advance.estudianteIdentificacion
-            ? ` · Estudiante: ${advance.estudianteIdentificacion}`
-            : '';
-          option.textContent = `${advance.nombreArchivo}${student}${advance.esVersionFinal ? ' · Versión final' : ''}`;
-          return option;
-        }));
+        if (reviewStudent) {
+          const estudiantesUnicos = [];
+          const idsVistos = new Set();
+          
+          advances.forEach(adv => {
+            if (!idsVistos.has(adv.estudianteId)) {
+              idsVistos.add(adv.estudianteId);
+              estudiantesUnicos.push({
+                id: adv.estudianteId,
+                nombre: adv.estudianteIdentificacion || `ID: ${adv.estudianteId}`
+              });
+            }
+          });
+
+          reviewStudent.replaceChildren(...estudiantesUnicos.map(estudiante => {
+            const option = document.createElement('option');
+            option.value = estudiante.id;
+            option.textContent = estudiante.nombre;
+            return option;
+          }));
+
+          const actualizarAvances = () => {
+            const estudianteSeleccionado = reviewStudent.value;
+            const avancesFiltrados = advances.filter(adv => String(adv.estudianteId) === String(estudianteSeleccionado));
+            
+            reviewAdvance.replaceChildren(...avancesFiltrados.map((advance) => {
+              const option = document.createElement('option');
+              option.value = advance.avanceId;
+              option.dataset.studentId = advance.estudianteId;
+              option.dataset.fileName = advance.nombreArchivo;
+              option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+              return option;
+            }));
+
+            if (reviewAdvance.options.length > 0) {
+              updateSelectedAdvance(root, reviewAdvance.options[0]);
+            } else {
+              reviewAdvance.innerHTML = '<option value="">Sin avances</option>';
+            }
+          };
+
+          reviewStudent.addEventListener('change', actualizarAvances);
+          actualizarAvances();
+
+        } else {
+          reviewAdvance.replaceChildren(...advances.map((advance) => {
+            const option = document.createElement('option');
+            option.value = advance.avanceId;
+            option.dataset.studentId = advance.estudianteId;
+            option.dataset.fileName = advance.nombreArchivo;
+            option.textContent = `${advance.nombreArchivo}${advance.esVersionFinal ? ' · Versión final' : ''}`;
+            return option;
+          }));
+          updateSelectedAdvance(root, reviewAdvance.options[0]);
+        }
+
         if (reviewAdvanceStatus) {
           reviewAdvanceStatus.textContent = 'La revisión quedará asociada a la versión seleccionada.';
         }
-        updateSelectedAdvance(root, reviewAdvance.options[0]);
       })
       .catch((error) => {
         reviewAdvance.innerHTML = '<option value="">No se pudieron cargar los avances</option>';
-        if (reviewAdvanceStatus) {
-          reviewAdvanceStatus.textContent = `Error al cargar los avances: ${error.message}`;
-        }
+        if (reviewAdvanceStatus) reviewAdvanceStatus.textContent = `Error al cargar los avances: ${error.message}`;
       });
+      
+    reviewAdvance.addEventListener('change', () => {
+      updateSelectedAdvance(root, reviewAdvance.options[reviewAdvance.selectedIndex]);
+    });
   }
 
   reviewAdvance?.addEventListener('change', () => {

@@ -1,4 +1,4 @@
-import { authRequest } from './api.js';
+import { authRequest, repairMojibake } from './api.js';
 
 const loginView = document.querySelector('#loginView');
 const appShell = document.querySelector('.app-shell');
@@ -10,7 +10,13 @@ const userRole = document.querySelector('#loggedRole');
 const logoutButton = document.querySelector('#logoutButton');
 
 function persistAuthenticatedUser(user) {
-  const normalizedUser = { ...user, role: normalizeRole(user?.role ?? user?.rol) };
+  const normalizedUser = Object.fromEntries(
+    Object.entries(user || {}).map(([key, value]) => [
+      key,
+      typeof value === 'string' ? repairMojibake(value) : value
+    ])
+  );
+  normalizedUser.role = normalizeRole(normalizedUser.role ?? normalizedUser.rol);
   const serialized = JSON.stringify(normalizedUser);
   sessionStorage.setItem('authUser', serialized);
   localStorage.setItem('authUser', serialized);
@@ -21,12 +27,7 @@ export function getCurrentUser() {
   const value = localStorage.getItem('authUser') || sessionStorage.getItem('authUser');
   if (!value) return null;
   try {
-    const parsed = JSON.parse(value);
-    const normalizedUser = { ...parsed, role: normalizeRole(parsed?.role ?? parsed?.rol) };
-    if (normalizedUser.role !== (parsed?.role ?? parsed?.rol)) {
-      persistAuthenticatedUser(normalizedUser);
-    }
-    return normalizedUser;
+    return persistAuthenticatedUser(JSON.parse(value));
   } catch {
     sessionStorage.removeItem('authUser');
     sessionStorage.removeItem('authToken');

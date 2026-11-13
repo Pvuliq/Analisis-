@@ -191,8 +191,12 @@ const listGuideActivity = (req, res) => {
 
     const query = `
         SELECT 'entrega' AS tipo, a.avanceId AS referenciaId, a.fechaEntrega AS fecha,
-               a.nombreArchivo, a.estudianteId, a.estado, a.esVersionFinal
+               a.nombreArchivo, a.estudianteId,
+               COALESCE(p.nombre_persona, u.nombre_usuario, a.estudianteId) AS nombreEstudiante,
+               a.estado, a.esVersionFinal
         FROM avances a
+        LEFT JOIN BD02_VALIDACIONES.usuario u ON u.rol_universitario = a.estudianteId
+        LEFT JOIN BD02_VALIDACIONES.persona p ON p.rut_persona = u.rut_persona
         WHERE a.profesorGuiaId = ?
         ORDER BY a.fechaEntrega DESC
         LIMIT 20

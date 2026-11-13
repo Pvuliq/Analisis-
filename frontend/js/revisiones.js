@@ -1,7 +1,24 @@
-import { post, get } from './api.js';
+import { post, get, repairMojibake } from './api.js';
 import { getCurrentUser } from './auth.js';
 
 const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+
+function escapeHtml(value) {
+  return repairMojibake(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[character]));
+}
+
+function formatReviewDate(value) {
+  return new Intl.DateTimeFormat('es-CL', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(value));
+}
 
 function updateSelectedAdvance(root, option) {
   if (!option || !option.value) return;
@@ -11,7 +28,7 @@ function updateSelectedAdvance(root, option) {
   const downloadButton = root.querySelector('#downloadAdvanceButton');
   const studentId = option.dataset.studentId;
   if (link) link.href = `${API_BASE_URL}/api/avances/${encodeURIComponent(option.value)}/descargar`;
-  if (name) name.textContent = option.dataset.fileName || 'Avance seleccionado';
+  if (name) name.textContent = repairMojibake(option.dataset.fileName || 'Avance seleccionado');
   if (meta) meta.textContent = `Estudiante: ${studentId} · Abrir PDF`;
   if (downloadButton) downloadButton.textContent = 'Abrir PDF';
   root.dispatchEvent(new CustomEvent('advance:selected', {
@@ -172,7 +189,7 @@ export function bindReviewEvents(root = document) {
               idsVistos.add(adv.estudianteId);
               estudiantesUnicos.push({
                 id: adv.estudianteId,
-                nombre: adv.estudianteIdentificacion || `ID: ${adv.estudianteId}`
+                nombre: adv.nombreEstudiante || adv.estudianteIdentificacion || `ID: ${adv.estudianteId}`
               });
             }
           });
@@ -238,22 +255,45 @@ export function bindReviewEvents(root = document) {
   });
 
   if (studentFeedbackArea) {
-    get('/api/revisiones')
-      .then((res) => {
-        const lista = Array.isArray(res) ? res : (res.revisiones || []);
+    const currentUser = getCurrentUser();
+    const estudianteId = currentUser?.estudianteId || currentUser?.rut;
+    Promise.all([
+      get('/api/revisiones'),
+      get(`/api/avances?estudianteId=${encodeURIComponent(estudianteId)}`)
+    ])
+      .then(([revisiones, avances]) => {
+        const lista = Array.isArray(revisiones) ? revisiones : [];
+        const entregas = Array.isArray(avances) ? avances : [];
+        const revisados = new Set(lista.map((revision) => String(revision.avanceId)));
+        const pendientes = entregas.filter((avance) => !revisados.has(String(avance.avanceId)));
 
-        if (lista.length === 0) {
-          studentFeedbackArea.textContent = 'No hay observaciones nuevas para mostrar.';
+        if (lista.length === 0 && pendientes.length === 0) {
+          studentFeedbackArea.textContent = 'No hay avances ni observaciones para mostrar.';
           return;
         }
 
-        studentFeedbackArea.innerHTML = lista.map((rev) => `
-          <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--coral); background: #ffffff;">
-            <strong>Resultado: ${rev.resultado || rev.estado || 'Revisado'}</strong>
-            <p style="margin: 8px 0 4px; color: var(--ink);">${rev.observaciones}</p>
-            <small style="color: var(--muted);">${new Date(rev.fecha_revision).toLocaleString()}</small>
-          </div>
-        `).join('');
+        studentFeedbackArea.innerHTML = [
+          ...lista.map((rev) => `
+            <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--coral); background: #ffffff;">
+              <strong>${escapeHtml(rev.documento || 'Documento revisado')}</strong>
+              <p style="margin: 8px 0 4px; color: var(--ink);">${escapeHtml(rev.observaciones)}</p>
+              <small style="color: var(--muted);">
+                Resultado: ${escapeHtml(rev.resultado || 'Revisado')} ·
+                ${escapeHtml(rev.profesor_nombre || 'Profesor guía')} ·
+                ${escapeHtml(formatReviewDate(rev.fecha_revision))}
+              </small>
+            </div>
+          `),
+          ...pendientes.map((avance) => `
+            <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--muted); background: #ffffff;">
+              <strong>${escapeHtml(avance.nombreArchivo)}</strong>
+              <p style="margin: 8px 0 4px; color: var(--ink);">
+                Este avance sigue en proceso de revisión.
+              </p>
+              <small style="color: var(--muted);">${escapeHtml(avance.estado || 'Esperando revisión')}</small>
+            </div>
+          `)
+        ].join('');
       })
       .catch((err) => {
         studentFeedbackArea.textContent = `Error al cargar revisiones: ${err.message}`;

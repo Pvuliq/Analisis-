@@ -98,6 +98,8 @@ const initializeSchema = async () => {
         )
     `);
     await ensureColumn('revisiones', 'avanceId', 'INT NULL');
+    await ensureColumn('revisiones', 'profesor_guia_id', 'VARCHAR(20) NULL');
+    await ensureColumn('revisiones', 'profesor_nombre', 'VARCHAR(100) NULL');
 
     await query(`
         CREATE TABLE IF NOT EXISTS autorizaciones_defensa (

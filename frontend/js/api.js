@@ -1,6 +1,29 @@
 const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
 const AUTH_API_BASE_URL = window.AUTH_API_BASE_URL || 'http://localhost:8081';
 
+export function repairMojibake(value) {
+  const text = String(value ?? '');
+  if (!/[ÃÂâ]/.test(text)) return text;
+
+  try {
+    const bytes = Uint8Array.from(text, (character) => character.charCodeAt(0));
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function normalizeEncoding(value) {
+  if (typeof value === 'string') return repairMojibake(value);
+  if (Array.isArray(value)) return value.map(normalizeEncoding);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, normalizeEncoding(item)])
+    );
+  }
+  return value;
+}
+
 export function apiUrl(endpoint) {
   return `${API_BASE_URL}${endpoint}`;
 }
@@ -16,9 +39,10 @@ function authHeaders() {
 
 async function parseResponse(response) {
   const contentType = response.headers.get('content-type') || '';
-  const data = contentType.includes('application/json')
+  const responseData = contentType.includes('application/json')
     ? await response.json()
     : await response.text();
+  const data = normalizeEncoding(responseData);
 
   if (!response.ok) {
     const message = typeof data === 'string' ? data : data.message;

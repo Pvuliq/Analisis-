@@ -452,7 +452,7 @@ function renderGuideActivity(activity = []) {
           <span class="activity-icon">↑</span>
           <div>
             <strong>Nuevo avance recibido</strong>
-            <p>${escapeHtml(`El estudiante ${item.estudianteId} entregó ${item.nombreArchivo}.`)}</p>
+            <p>${escapeHtml(`El estudiante ${item.nombreEstudiante || item.estudianteId} entregó ${item.nombreArchivo}.`)}</p>
             <small>${escapeHtml(formatActivityDate(item.fecha))}</small>
           </div>
         </article>

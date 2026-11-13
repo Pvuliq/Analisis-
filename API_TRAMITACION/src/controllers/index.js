@@ -168,12 +168,17 @@ const listStudentActivity = (req, res) => {
             FROM revisiones r
             INNER JOIN avances a ON a.avanceId = r.avanceId
             WHERE a.estudianteId = ?
+            UNION ALL
+            SELECT 'notificacion' AS tipo, n.id AS referenciaId, n.fechaCreacion AS fecha,
+                   NULL AS nombreArchivo, n.mensaje AS observaciones, NULL AS resultado
+            FROM notificaciones_evaluacion n
+            WHERE n.estudianteId = ?
         ) AS actividad
         ORDER BY fecha DESC
         LIMIT 20
     `;
 
-    database.query(query, [estudianteId, estudianteId], (error, rows) => {
+    database.query(query, [estudianteId, estudianteId, estudianteId], (error, rows) => {
         if (error) {
             console.error('No se pudo consultar la actividad del estudiante:', error);
             return res.status(500).json({ message: 'No se pudo consultar la actividad del estudiante.' });

@@ -177,6 +177,37 @@ const initializeSchema = async () => {
         'uq_evaluacion_avance',
         'UNIQUE KEY uq_evaluacion_avance (avanceId)'
     );
+    await query(`
+        CREATE TABLE IF NOT EXISTS notificaciones_evaluacion (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            evaluacionCorreferenteId INT NOT NULL,
+            estudianteId VARCHAR(20) NOT NULL,
+            avanceId INT NOT NULL,
+            mensaje VARCHAR(255) NOT NULL,
+            fechaCreacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            leida TINYINT(1) NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_notificacion_evaluacion (evaluacionCorreferenteId)
+        )
+    `);
+    await query(`
+        UPDATE avances a
+        INNER JOIN evaluacion_correferente ec ON ec.avanceId = a.avanceId
+        SET a.estado = 'Revisado por correferente'
+        WHERE a.esVersionFinal = 1 AND a.estado = 'Esperando revisión'
+    `);
+    await query(`
+        INSERT INTO notificaciones_evaluacion
+            (evaluacionCorreferenteId, estudianteId, avanceId, mensaje)
+        SELECT ec.id, ec.estudianteId, ec.avanceId,
+               'El correferente registró una nueva evaluación de tu informe final. Ya puedes consultar el documento de revisión.'
+        FROM evaluacion_correferente ec
+        INNER JOIN avances a ON a.avanceId = ec.avanceId
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM notificaciones_evaluacion ne
+            WHERE ne.evaluacionCorreferenteId = ec.id
+        )
+    `);
     const unlinkedEvaluations = await query(
         'SELECT COUNT(*) AS total FROM evaluacion_correferente WHERE avanceId IS NULL'
     );
@@ -539,6 +570,12 @@ const listarAptos = async (req, res) => {
                 AND ec.avanceId = a.avanceId
             WHERE LOWER(u.rol) IN ('memorista', 'estudiante', 'prememorista')
               AND u.rol_universitario IS NOT NULL
+              AND EXISTS (
+                  SELECT 1
+                  FROM revisiones rg
+                  WHERE rg.avanceId = a.avanceId
+                    AND rg.resultado = 'Avance suficiente'
+              )
         `;
 
         const params = [];
@@ -578,16 +615,42 @@ const guardarEvaluacionCorreferente = async (req, res) => {
         return res.status(400).json({ message: 'Debe ingresar comentarios u observaciones.' });
     }
 
+    let connection;
+    let transactionStarted = false;
+    let transactionCommitted = false;
     try {
+        connection = await getConnection();
+        await beginTransaction(connection);
+        transactionStarted = true;
+
         const finalReports = await query(
             `SELECT avanceId
              FROM avances
              WHERE estudianteId = ? AND avanceId = ? AND esVersionFinal = 1
              LIMIT 1`,
-            [estudianteId, avanceId]
+            [estudianteId, avanceId],
+            connection
         );
         if (finalReports.length === 0) {
+            await rollbackTransaction(connection);
+            transactionStarted = false;
             return res.status(409).json({ message: 'El informe final indicado ya no está disponible para evaluación.' });
+        }
+
+        const guideReviews = await query(
+            `SELECT id
+             FROM revisiones
+             WHERE avanceId = ? AND resultado = 'Avance suficiente'
+             LIMIT 1`,
+            [avanceId],
+            connection
+        );
+        if (guideReviews.length === 0) {
+            await rollbackTransaction(connection);
+            transactionStarted = false;
+            return res.status(409).json({
+                message: 'El Profesor Guía debe marcar el informe final como avance suficiente antes de la evaluación del correferente.'
+            });
         }
 
         await query(`
@@ -600,7 +663,47 @@ const guardarEvaluacionCorreferente = async (req, res) => {
                 comentarios = VALUES(comentarios),
                 acuerdoDefensa = VALUES(acuerdoDefensa),
                 fechaEvaluacion = CURRENT_TIMESTAMP
-        `, [estudianteId, avanceId, correferenteId, nota, comentarios, acuerdoDefensa ? 1 : 0]);
+        `, [estudianteId, avanceId, correferenteId, nota, comentarios, acuerdoDefensa ? 1 : 0], connection);
+
+        const evaluations = await query(
+            `SELECT id
+             FROM evaluacion_correferente
+             WHERE avanceId = ?
+             LIMIT 1`,
+            [avanceId],
+            connection
+        );
+        if (evaluations.length === 0) {
+            throw new Error('La evaluación se guardó, pero no se pudo recuperar su identificador.');
+        }
+
+        await query(`
+            INSERT INTO notificaciones_evaluacion
+                (evaluacionCorreferenteId, estudianteId, avanceId, mensaje)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                estudianteId = VALUES(estudianteId),
+                avanceId = VALUES(avanceId),
+                mensaje = VALUES(mensaje),
+                fechaCreacion = CURRENT_TIMESTAMP,
+                leida = 0
+        `, [
+            evaluations[0].id,
+            estudianteId,
+            avanceId,
+            'El correferente registró una nueva evaluación de tu informe final. Ya puedes consultar el documento de revisión.'
+        ], connection);
+
+        await query(
+            `UPDATE avances
+             SET estado = 'Revisado por correferente'
+             WHERE avanceId = ?`,
+            [avanceId],
+            connection
+        );
+
+        await commitTransaction(connection);
+        transactionCommitted = true;
 
         return res.status(201).json({
             message: 'Evaluación de correferente registrada con éxito.',
@@ -608,8 +711,38 @@ const guardarEvaluacionCorreferente = async (req, res) => {
             avanceId
         });
     } catch (error) {
+        if (connection && transactionStarted && !transactionCommitted) {
+            await logRollbackError(connection);
+        }
         console.error('Error al registrar evaluación de correferente:', error);
         return res.status(500).json({ message: 'No se pudo guardar la evaluación del correferente.' });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+const obtenerNotificacionesEvaluacion = async (req, res) => {
+    const estudianteId = getStudentId(req.params.estudianteId);
+    if (!estudianteId) {
+        return res.status(400).json({ message: 'El identificador del estudiante es inválido.' });
+    }
+
+    if (String(req.user?.estudianteId || req.user?.rut || '').trim() !== estudianteId) {
+        return res.status(403).json({ message: 'No puedes consultar notificaciones de otro estudiante.' });
+    }
+
+    try {
+        const rows = await query(
+            `SELECT id, evaluacionCorreferenteId, avanceId, mensaje, fechaCreacion, leida
+             FROM notificaciones_evaluacion
+             WHERE estudianteId = ?
+             ORDER BY fechaCreacion DESC`,
+            [estudianteId]
+        );
+        return res.json(rows);
+    } catch (error) {
+        console.error('No se pudieron consultar las notificaciones de evaluación:', error);
+        return res.status(500).json({ message: 'No se pudieron consultar las notificaciones de evaluación.' });
     }
 };
 
@@ -658,6 +791,7 @@ module.exports = {
     autorizarDefensa,
     obtenerNotificaciones,
     listarNotificacionesPorDestinatario,
+    obtenerNotificacionesEvaluacion,
     listarAptos,
     guardarEvaluacionCorreferente,
     obtenerEvaluacionCorreferente

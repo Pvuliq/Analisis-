@@ -929,6 +929,70 @@ h1 {
   font-size: 0.9rem;
 }
 
+.defense-status {
+  display: grid;
+  gap: 7px;
+  padding: 20px 22px;
+  margin: 18px 0 14px;
+  border-left: 6px solid var(--yellow);
+  background: #fffaf0;
+  box-shadow: 3px 3px 0 rgba(23, 33, 45, 0.08);
+}
+
+.defense-status-label,
+.defense-notification-label {
+  color: var(--muted);
+  font: 700 0.68rem Arial, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.defense-status strong {
+  color: var(--navy);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.defense-status-ready {
+  border-left-color: var(--teal);
+  background: #eefaf7;
+}
+
+.defense-status-ready strong,
+.defense-status-approved strong {
+  color: var(--teal);
+}
+
+.defense-status-approved {
+  border-left-color: var(--teal);
+  background: #e5f7f2;
+}
+
+.defense-status-rejected {
+  border-left-color: var(--coral);
+  background: #fff1ed;
+}
+
+.defense-status-rejected strong {
+  color: #b53b2b;
+}
+
+.defense-notification {
+  display: grid;
+  gap: 7px;
+  padding: 16px 18px;
+  margin-top: 20px;
+  border: 1px solid #b9deda;
+  background: #f1fbf9;
+}
+
+.defense-notification strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 .scenario-content {
   padding-top: 28px;
 }

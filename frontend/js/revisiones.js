@@ -259,20 +259,33 @@ export function bindReviewEvents(root = document) {
     const estudianteId = currentUser?.estudianteId || currentUser?.rut;
     Promise.all([
       get('/api/revisiones'),
-      get(`/api/avances?estudianteId=${encodeURIComponent(estudianteId)}`)
-    ])
-      .then(([revisiones, avances]) => {
+      get(`/api/avances?estudianteId=${encodeURIComponent(estudianteId)}`),
+      get(`/api/defensas/${encodeURIComponent(estudianteId)}/evaluacion`)
+        .catch(() => null)
+    ]).then(([revisiones, avances, evaluacion]) => {
         const lista = Array.isArray(revisiones) ? revisiones : [];
         const entregas = Array.isArray(avances) ? avances : [];
         const revisados = new Set(lista.map((revision) => String(revision.avanceId)));
         const pendientes = entregas.filter((avance) => !revisados.has(String(avance.avanceId)));
 
-        if (lista.length === 0 && pendientes.length === 0) {
+        if (lista.length === 0 && pendientes.length === 0 && !evaluacion) {
           studentFeedbackArea.textContent = 'No hay avances ni observaciones para mostrar.';
           return;
         }
 
         studentFeedbackArea.innerHTML = [
+          ...(evaluacion ? [`
+            <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--teal); background: #ffffff;">
+              <strong>Evaluación del Correferente</strong>
+              <p style="margin: 8px 0 4px; color: var(--ink);">
+                Nota propuesta: <strong>${escapeHtml(evaluacion.nota)}</strong>
+              </p>
+              <p style="margin: 8px 0 4px; color: var(--ink);">${escapeHtml(evaluacion.comentarios)}</p>
+              <small style="color: var(--muted);">
+                ${escapeHtml(formatReviewDate(evaluacion.fechaEvaluacion))}
+              </small>
+            </div>
+          `] : []),
           ...lista.map((rev) => `
             <div style="padding: 14px; margin-bottom: 12px; border-left: 4px solid var(--coral); background: #ffffff;">
               <strong>${escapeHtml(rev.documento || 'Documento revisado')}</strong>

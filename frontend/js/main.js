@@ -348,7 +348,7 @@ function renderStudentDeliverySummary(deliveries = []) {
       <div class="delivery-row">
         <span class="delivery-type">PDF</span>
         <span class="delivery-info"><strong>${delivery.nombreArchivo}</strong><small>${formatDeliveryDate(delivery.fechaEntrega)} · ${formatBytes(delivery.tamanoBytes)}</small></span>
-        <span class="delivery-status ${String(delivery.estado).toLowerCase() === 'revisado' ? 'status-done' : 'status-review'}">${String(delivery.estado).toUpperCase()}</span>
+        <span class="delivery-status ${String(delivery.estado).toLowerCase().startsWith('revisado') ? 'status-done' : 'status-review'}">${String(delivery.estado).toUpperCase()}</span>
       </div>
     `).join('')}
   `;
@@ -400,13 +400,18 @@ function renderStudentActivity(activity = []) {
     <div class="activity-list">
       ${activity.map((item) => {
         const isReview = item.tipo === 'revision';
-        const title = isReview ? 'Recibiste una observación' : 'Subiste un avance';
-        const description = isReview
-          ? `${item.nombreArchivo}: ${item.observaciones || 'El profesor revisó tu entrega.'}`
-          : `Registraste ${item.nombreArchivo} para revisión.`;
+        const isNotification = item.tipo === 'notificacion';
+        const title = isNotification
+          ? 'Recibiste una notificación'
+          : isReview ? 'Recibiste una observación' : 'Subiste un avance';
+        const description = isNotification
+          ? item.observaciones
+          : isReview
+            ? `${item.nombreArchivo}: ${item.observaciones || 'El profesor revisó tu entrega.'}`
+            : `Registraste ${item.nombreArchivo} para revisión.`;
         return `
           <article class="activity-item">
-            <span class="activity-icon">${isReview ? '!' : '↑'}</span>
+            <span class="activity-icon">${isNotification || isReview ? '!' : '↑'}</span>
             <div>
               <strong>${title}</strong>
               <p>${escapeHtml(description)}</p>

@@ -2,6 +2,16 @@ import { get, post, apiUrl } from './api.js';
 import { getCurrentUser } from './auth.js';
 const DEFENSE_API_PATH = '/api/defensas';
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[character]));
+}
+
 function activeStudentId() {
   const user = getCurrentUser();
   return user?.estudianteId || user?.rut || '';
@@ -140,8 +150,15 @@ export function renderDefense(isGuide) {
         <div class="panel-topline"><span class="story-symbol">03</span><span>Mi defensa</span></div>
         <h4>Estado de autorización</h4>
         <p>Estado actual del proceso:</p>
-        <div class="empty-review" data-defense-state>Consultando...</div>
+        <div class="defense-status defense-status-pending" data-defense-state>
+          <span class="defense-status-label">Estado actual</span>
+          <strong>Consultando...</strong>
+        </div>
         <p class="decision-feedback" data-defense-feedback role="status">Consultando el estado en el servidor...</p>
+        <div class="defense-notification" data-corref-notifications>
+          <span class="defense-notification-label">Notificación</span>
+          <strong>Consultando notificaciones...</strong>
+        </div>
       </section>
       <aside class="evidence-panel">
         <p class="section-label">Próximo paso</p>
@@ -180,7 +197,21 @@ function updateRequirement(root, name, complete, completeText, pendingText, reje
 
 function displayDefenseState(root, state) {
   root.querySelectorAll('[data-defense-state]').forEach((element) => {
-    element.textContent = state.estado;
+    element.classList.remove(
+      'defense-status-pending',
+      'defense-status-ready',
+      'defense-status-approved',
+      'defense-status-rejected'
+    );
+    const statusClass = state.autorizacionEmitida
+      ? 'defense-status-approved'
+      : state.evaluacionCorreferenteRegistrada && !state.evaluacionCorreferenteAprobada
+        ? 'defense-status-rejected'
+        : state.evaluacionCorreferenteAprobada
+          ? 'defense-status-ready'
+          : 'defense-status-pending';
+    element.classList.add(statusClass);
+    element.innerHTML = `<span class="defense-status-label">Estado actual</span><strong>${escapeHtml(state.estado)}</strong>`;
   });
 
   updateRequirement(
@@ -447,6 +478,31 @@ function bindReviewerEvents(root) {
   });
 }
 
+async function loadCorreferenteNotifications(root, studentId) {
+  const container = root.querySelector('[data-corref-notifications]');
+  if (!container) return;
+
+  try {
+    const notifications = await get(
+      `${DEFENSE_API_PATH}/${encodeURIComponent(studentId)}/notificaciones-evaluacion`
+    );
+    if (!Array.isArray(notifications)) {
+      throw new Error('El servidor devolvió una lista de notificaciones inválida.');
+    }
+
+    const latest = notifications[0];
+    container.innerHTML = `
+      <span class="defense-notification-label">Notificación</span>
+      <strong>${escapeHtml(latest ? latest.mensaje : 'Aún no hay evaluaciones del correferente disponibles.')}</strong>
+    `;
+  } catch (error) {
+    container.innerHTML = `
+      <span class="defense-notification-label">Notificación</span>
+      <strong>No se pudieron consultar las notificaciones: ${escapeHtml(error.message)}</strong>
+    `;
+  }
+}
+
 export function bindDefenseEvents(root = document) {
   if (root.querySelector('#correfStudentSelect')) {
     bindReviewerEvents(root);
@@ -473,7 +529,10 @@ export function bindDefenseEvents(root = document) {
     }
   }
 
-  if (initialStudentId) loadDefenseState(root, initialStudentId);
+  if (initialStudentId) {
+    loadDefenseState(root, initialStudentId);
+    loadCorreferenteNotifications(root, initialStudentId);
+  }
 
   if (defenseStudentSelect) {
     get(`${DEFENSE_API_PATH}/documentos`)

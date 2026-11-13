@@ -28,7 +28,7 @@ Para utilizar el proyecto base debe tener instalado [Node.js](https://nodejs.org
 
 ## Pasos extras a seguir luego del levantamiento para revisar la página web
 
-- Muy importante: revisar que todas las APIs o contenedores de Docker estén corriendo y que estén creadas las bases de datos pedidas al inicio.
+- Muy importante: revisar que el Docker este abierto si no puede tirar error.
 
 ### 1. Iniciar el servidor local del Frontend
 
@@ -48,7 +48,7 @@ Este flujo permite verificar de forma completa la pagina creada y las historias 
 
 ### Video de muestra del flujo y funcionamiento:
 
-
+*
 
 ### 1. Usuarios creados
 

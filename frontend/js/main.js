@@ -4,6 +4,7 @@ import { bindDefenseEvents, renderDefense, renderGuideReview } from './defensa.j
 import { bindCorreferenteEvents, renderCorreferenteView } from './correferente.js';
 import { get } from './api.js';
 import { getCurrentUser, roleToView } from './auth.js';
+import { bindProposalEvents, getProfessorGuides, getStudentProposal, renderProposalForm } from './propuestas.js';
 const activityPanel = document.querySelector('.activity-panel');
 const homeLayout = document.querySelector('.home-layout');
 const navigationItems = document.querySelectorAll('.nav-item');
@@ -27,6 +28,7 @@ const primaryButton = document.querySelector('#primaryButton');
 
 let currentSection = 'inicio';
 let activeRole = 'student';
+let studentProposal = null;
 
 const roleProfiles = {
   student: {
@@ -188,8 +190,61 @@ function setActiveNavigation(section) {
     } else {
       item.hidden = false;
     }
+
     item.classList.toggle('is-active', s === section);
   });
+}
+
+async function showStudentProposalGate() {
+  const professors = await getProfessorGuides();
+  navigationItems.forEach((item) => {
+    item.hidden = true;
+    item.classList.remove('is-active');
+  });
+  homeLayout.hidden = true;
+  featureView.innerHTML = `${featureHeader(
+    'HU-09 · Registro de propuesta',
+    'Inicia tu proceso de memoria',
+    'Antes de continuar, registra la propuesta inicial de tu tema de memoria.',
+    'Memorista'
+  )}<div class="scenario-content">${renderProposalForm(professors)}</div>`;
+  featureView.hidden = false;
+  workspace.classList.add('feature-active');
+  workspaceTitle.textContent = 'Registrar propuesta';
+  workspaceNote.textContent = 'Completa los antecedentes obligatorios de tu proyecto.';
+  bindProposalEvents(featureView, (proposal) => {
+    studentProposal = proposal;
+    updateHomeRole('student');
+    statusBadge.textContent = proposal.estado;
+    welcomeTitle.textContent = 'Propuesta registrada correctamente.';
+    welcomeDescription.textContent = 'Tu propuesta está pendiente de validación. Ya puedes continuar con el seguimiento de tu memoria.';
+    showHome();
+  });
+}
+
+async function initializeStudentWorkspace() {
+  try {
+    studentProposal = await getStudentProposal();
+    if (!studentProposal) {
+      showStudentProposalGate();
+      return;
+    }
+    updateHomeRole('student');
+    statusBadge.textContent = studentProposal.estado;
+    welcomeTitle.textContent = 'Tu propuesta ya está registrada.';
+    welcomeDescription.textContent = 'Consulta el estado de tu propuesta y continúa con el seguimiento de tu memoria.';
+    showHome();
+  } catch (error) {
+    console.error('No se pudo consultar la propuesta del estudiante:', error);
+    navigationItems.forEach((item) => { item.hidden = true; });
+    homeLayout.hidden = true;
+    featureView.innerHTML = `
+      <div class="empty-review">
+        No se pudo consultar tu propuesta. ${escapeHtml(error.message)}
+      </div>
+    `;
+    featureView.hidden = false;
+  }
 }
 
 function featureHeader(identifier, title, description, role) {
@@ -475,14 +530,20 @@ window.addEventListener('advance:created', () => {
 const currentUser = getCurrentUser();
 if (currentUser) {
   activeRole = roleToView(currentUser.role ?? currentUser.rol);
-  updateHomeRole(activeRole);
-  setActiveNavigation('inicio');
-  loadGuidePendingCount();
+  if (activeRole === 'student') initializeStudentWorkspace();
+  else {
+    updateHomeRole(activeRole);
+    setActiveNavigation('inicio');
+    loadGuidePendingCount();
+  }
 }
 
 document.addEventListener('auth:ready', (event) => {
   activeRole = roleToView(event.detail.role ?? event.detail.rol);
-  updateHomeRole(activeRole);
-  showHome();
-  loadGuidePendingCount();
+  if (activeRole === 'student') initializeStudentWorkspace();
+  else {
+    updateHomeRole(activeRole);
+    showHome();
+    loadGuidePendingCount();
+  }
 });

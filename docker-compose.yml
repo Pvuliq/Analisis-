@@ -48,12 +48,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   api_ejemplo:
     build:
       context: ./API_EJEMPLO

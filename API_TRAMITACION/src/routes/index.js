@@ -4,6 +4,7 @@ const router = new express.Router();
 
 const index = require('../controllers/index');
 const defensasController = require('../controllers/defensasController');
+const propuestasController = require('../controllers/propuestasController');
 
 const upload = multer({
 	storage: multer.memoryStorage(),
@@ -23,6 +24,8 @@ router.get('/', (req, res) => res.json({message: 'Probando... La prueba de API_T
 router.get('/createTable', index.createTable);
 router.post('/api/avances', upload.single('archivoPdf'), index.createAdvance);
 router.get('/api/avances', index.listAdvances);
+router.get('/api/propuestas/:estudianteId', propuestasController.getProposal);
+router.post('/api/propuestas', propuestasController.createProposal);
 router.get('/api/actividad', index.listStudentActivity);
 router.get('/api/actividad/profesor', index.listGuideActivity);
 router.get('/api/avances/:id/descargar', index.downloadAdvance);

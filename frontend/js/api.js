@@ -52,6 +52,10 @@ export async function authRequest(endpoint, options = {}) {
   return parseResponse(response);
 }
 
+export function authGet(endpoint, options = {}) {
+  return authRequest(endpoint, { ...options, method: 'GET' });
+}
+
 export function get(endpoint, options = {}) {
   return apiRequest(endpoint, { ...options, method: 'GET' });
 }

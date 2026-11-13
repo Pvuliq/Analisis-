@@ -49,4 +49,24 @@ const login = (req, res) => {
 
 const profile = (req, res) => res.json({ user: req.user });
 
-module.exports = { login, profile };
+const listProfessorGuides = (req, res) => {
+    const query = `
+        SELECT u.rol_universitario AS profesorGuiaId,
+               COALESCE(p.nombre_persona, u.nombre_usuario) AS nombre
+        FROM usuario u
+        LEFT JOIN persona p ON p.rut_persona = u.rut_persona
+        WHERE LOWER(u.rol) IN ('profesor_guia', 'profesor', 'guia')
+          AND u.rol_universitario IS NOT NULL
+        ORDER BY nombre ASC
+    `;
+
+    database.query(query, (error, rows) => {
+        if (error) {
+            console.error('No se pudieron consultar los profesores guía:', error);
+            return res.status(500).json({ message: 'No se pudieron consultar los profesores guía.' });
+        }
+        return res.json(rows);
+    });
+};
+
+module.exports = { login, profile, listProfessorGuides };

@@ -122,11 +122,10 @@ Para recorrer todos los roles del sistema se encuentran los siguientes usuarios 
    - Mis Revisiones: el sistema muestra el mensaje dejado por el Correferente y la nota que le fue entregada.
    - Defensa: debe mostrar el mensaje de `Apto para defensa` y un mensaje de que el correferente reviso el archivo.
   
---
+---
 
 # Proyecto Base
 
---
 
 ## Puntos a Considerar
 

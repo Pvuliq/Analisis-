@@ -26,7 +26,7 @@ Para utilizar el proyecto base debe tener instalado [Node.js](https://nodejs.org
 ## Prototipo
 * [Enlace al video explicando el prototipo.](https://youtu.be/3jvmSkmgGNc)
 
-## Pasos extras a seguir luego del levantamiento para revisar la página web
+## Pasos a seguir luego del levantamiento para revisar la página web
 
 - Muy importante: revisar que el Docker este abierto si no puede tirar error.
 
@@ -34,7 +34,7 @@ Para utilizar el proyecto base debe tener instalado [Node.js](https://nodejs.org
 
 Ahora al hacer este comando: docker compose up -d --build
 
-Se corren todos los Docker forma automática y se puede acceder a la pagina.
+Se corren todos los Docker y APIs de forma automática y se puede acceder a la pagina.
 
 ### 2. Abrir en el navegador
 
